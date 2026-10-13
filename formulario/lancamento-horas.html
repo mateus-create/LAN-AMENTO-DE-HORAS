@@ -1,0 +1,411 @@
+<title>Lançamento de Horas NAJ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: coluna única de app (máx. 640px), cabeçalho com resumo do dia, abas Novo / Lançamentos, cartões por lançamento com faixa de status */
+:root {
+  --bg: #f3f5f4;
+  --surface: #ffffff;
+  --sunken: #e8ecea;
+  --ink: #15211d;
+  --muted: #5b6a64;
+  --line: #d3dbd7;
+  --accent: #0f6b55;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcefe8;
+  --ok: #1d7a46;
+  --ok-soft: #dff3e6;
+  --warn: #a35a00;
+  --warn-soft: #fbeedb;
+  --bad: #b3261e;
+  --bad-soft: #fbe3e1;
+  --wait: #3d5a99;
+  --wait-soft: #e3e9f7;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1513; --surface: #17201d; --sunken: #1f2a26; --ink: #e6eeea; --muted: #94a59e; --line: #2c3934;
+  --accent: #4cc39f; --accent-ink: #062019; --accent-soft: #173a30;
+  --ok: #5fd08f; --ok-soft: #173525; --warn: #f0a94a; --warn-soft: #3a2a12; --bad: #ff8a80; --bad-soft: #3d1c1a; --wait: #9db4f0; --wait-soft: #1f2840;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1513; --surface: #17201d; --sunken: #1f2a26; --ink: #e6eeea; --muted: #94a59e; --line: #2c3934;
+  --accent: #4cc39f; --accent-ink: #062019; --accent-soft: #173a30;
+  --ok: #5fd08f; --ok-soft: #173525; --warn: #f0a94a; --warn-soft: #3a2a12; --bad: #ff8a80; --bad-soft: #3d1c1a; --wait: #9db4f0; --wait-soft: #1f2840;
+  color-scheme: dark }
+
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
+.app { max-width: 640px; margin: 0 auto; padding-inline: 16px; padding-block: 18px 96px; display: grid; gap: 18px }
+
+header { display: grid; gap: 14px }
+.brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap }
+h1 { font: 700 1.6rem/1.1 var(--display); margin: 0; letter-spacing: -0.01em; text-wrap: balance }
+.who { color: var(--muted); font-size: .85rem }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; display: grid; gap: 2px; cursor: pointer; text-align: left; font: inherit; color: inherit }
+.stat:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.stat b { font: 700 1.35rem/1.1 var(--display); font-variant-numeric: tabular-nums }
+.stat span { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em }
+.stat.wait b { color: var(--wait) } .stat.bad b { color: var(--bad) } .stat.ok b { color: var(--ok) }
+.robot { font-size: .82rem; color: var(--muted); display: flex; gap: 8px; align-items: center }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none }
+
+.tabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--sunken); padding: 4px; border-radius: 999px }
+.tabs button { border: 0; background: transparent; color: var(--muted); font: 600 .95rem var(--body); padding: 10px; border-radius: 999px; cursor: pointer }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / .12) }
+.tabs .count { display: inline-block; min-width: 1.4em; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--bad); color: #fff; font-size: .75rem }
+
+form { display: grid; gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 18px }
+.editing { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 8px 12px; font-size: .88rem; font-weight: 600 }
+.field { display: grid; gap: 6px; min-width: 0 }
+.field > label, .legend { font-weight: 600; font-size: .88rem }
+.hint { color: var(--muted); font-size: .8rem; font-weight: 400 }
+.opt { color: var(--muted); font-weight: 400 }
+input, select, textarea { width: 100%; font: 16px var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; min-width: 0 }
+textarea { min-height: 96px; resize: vertical }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent }
+.mono { font-family: var(--mono) }
+.row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+.seg { display: grid; gap: 6px }
+.seg label { display: flex; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; font-size: .92rem }
+.seg input { width: auto; accent-color: var(--accent) }
+.seg label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft) }
+.seg small { margin-left: auto; color: var(--muted); font-family: var(--mono) }
+.clock { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: end }
+.duration { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; background: var(--sunken); border-radius: 12px; padding: 10px 14px }
+.duration b { font: 500 1.6rem var(--mono); font-variant-numeric: tabular-nums }
+.duration.badtime b { color: var(--bad) }
+.mini { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 4px 10px; font: 500 .78rem var(--body); cursor: pointer }
+.switch { display: flex; align-items: center; justify-content: space-between; gap: 12px }
+.switch input { width: 46px; height: 26px; appearance: none; background: var(--line); border-radius: 999px; position: relative; cursor: pointer; border: 0; padding: 0; flex: none }
+.switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: left .15s }
+.switch input:checked { background: var(--accent) } .switch input:checked::after { left: 23px }
+.fixed { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: .8rem; border-top: 1px dashed var(--line); padding-top: 12px }
+.err { color: var(--bad); font-size: .82rem }
+.primary { border: 0; background: var(--accent); color: var(--accent-ink); font: 600 1rem var(--body); padding: 14px; border-radius: 12px; cursor: pointer }
+.primary:disabled { opacity: .5; cursor: progress }
+.ghost { border: 1px solid var(--line); background: transparent; color: var(--ink); font: 500 .85rem var(--body); padding: 8px 12px; border-radius: 10px; cursor: pointer }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+
+.filters { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px }
+.filters button { flex: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 12px; font: 500 .85rem var(--body); cursor: pointer }
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink) }
+.list { display: grid; gap: 10px }
+.day { font: 600 .78rem var(--body); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 6px; display: flex; justify-content: space-between }
+.card { background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--wait); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 8px; min-width: 0 }
+.card.lancado { border-left-color: var(--ok) } .card.erro { border-left-color: var(--bad) } .card.processando { border-left-color: var(--warn) }
+.top { display: flex; justify-content: space-between; gap: 10px; align-items: start }
+.client { font-weight: 600; overflow-wrap: anywhere }
+.time { font: 500 .9rem var(--mono); white-space: nowrap; font-variant-numeric: tabular-nums }
+.meta { color: var(--muted); font-size: .82rem; overflow-wrap: anywhere }
+.desc { font-size: .92rem; overflow-wrap: anywhere }
+.pill { display: inline-flex; align-items: center; gap: 6px; font: 600 .72rem var(--body); text-transform: uppercase; letter-spacing: .05em; padding: 3px 9px; border-radius: 999px; width: fit-content }
+.pill.pendente { background: var(--wait-soft); color: var(--wait) } .pill.lancado { background: var(--ok-soft); color: var(--ok) }
+.pill.erro { background: var(--bad-soft); color: var(--bad) } .pill.processando { background: var(--warn-soft); color: var(--warn) }
+.problem { background: var(--bad-soft); border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; font-size: .88rem }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chips button { border: 1px solid var(--bad); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 5px 10px; font: 500 .8rem var(--body); cursor: pointer; text-align: left }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end }
+.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .85rem }
+.danger { border-color: var(--bad); color: var(--bad) }
+.empty { text-align: center; color: var(--muted); padding: 28px 12px; border: 1px dashed var(--line); border-radius: var(--r); display: grid; gap: 4px }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: .9rem; z-index: 20; max-width: calc(100% - 32px) }
+.offline { background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 12px; font-size: .88rem }
+@media (max-width: 380px) { .row, .clock { grid-template-columns: 1fr } .stat b { font-size: 1.1rem } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>Lançamento de Horas</h1>
+      <span class="who">NAJ · MKS Advocacia · Mateus Galiza</span>
+    </div>
+    <div class="stats">
+      <button class="stat wait" type="button" data-go="pendente"><b id="sPend">–</b><span>Na fila</span></button>
+      <button class="stat bad" type="button" data-go="erro"><b id="sErr">–</b><span>Precisam de você</span></button>
+      <button class="stat ok" type="button" data-go="lancado"><b id="sHoras">–</b><span>Lançadas hoje</span></button>
+    </div>
+    <div class="robot"><span class="dot"></span><span>O robô confere a fila de hora em hora e lança no NAJ o que estiver pendente.</span></div>
+    <div class="offline" id="offline" hidden>Sem conexão com o armazenamento do formulário. Abra esta página pelo claude.ai com sua conta para salvar lançamentos.</div>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tabNovo" aria-selected="true" type="button">Novo lançamento</button>
+    <button role="tab" id="tabLista" aria-selected="false" type="button">Lançamentos<span class="count" id="tabCount" hidden></span></button>
+  </div>
+
+  <section id="paneNovo">
+    <form id="form" novalidate>
+      <div class="editing" id="editing" hidden><span id="editingTxt">Editando lançamento</span><button class="ghost" type="button" id="cancelEdit">Cancelar edição</button></div>
+
+      <div class="field">
+        <label for="cliente">Cliente</label>
+        <input id="cliente" autocomplete="off" list="clientesUsados" placeholder="Ex.: ESQUADRIAS DE ALUMINIO SCHNEIDER LTDA">
+        <datalist id="clientesUsados"></datalist>
+        <span class="hint">Escreva como está cadastrado no NAJ. Se houver mais de um parecido, o robô avisa e mostra as opções.</span>
+      </div>
+
+      <div class="field">
+        <label for="processo">Número do processo <span class="opt">(opcional)</span></label>
+        <input id="processo" class="mono" inputmode="numeric" autocomplete="off" placeholder="0000000-00.0000.0.00.0000">
+        <span class="hint">Com o número, o NAJ vincula o processo e confere se é do cliente informado.</span>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="area">Área jurídica</label>
+          <select id="area"></select>
+        </div>
+        <div class="field">
+          <label for="data">Data da atividade</label>
+          <input id="data" type="date">
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="legend">Tipo de atividade</span>
+        <div class="seg" id="tipos"></div>
+      </div>
+
+      <div class="field">
+        <label for="descricao">Descrição da atividade</label>
+        <textarea id="descricao" placeholder="O que foi feito"></textarea>
+      </div>
+
+      <div class="clock">
+        <div class="field">
+          <label for="inicio">Comecei às</label>
+          <input id="inicio" type="time" class="mono">
+        </div>
+        <div class="field">
+          <label for="termino">Terminei às</label>
+          <input id="termino" type="time" class="mono">
+        </div>
+        <div class="duration" id="duration"><span class="hint">Tempo no NAJ</span><b id="dur">00:00</b><button class="mini" type="button" id="agora">Terminei agora</button></div>
+      </div>
+
+      <div class="switch">
+        <label for="disp">Disponível ao cliente <span class="hint" style="display:block">O cliente vê esta atividade no portal dele.</span></label>
+        <input id="disp" type="checkbox" checked>
+      </div>
+
+      <div class="fixed"><span>Usuário: MATEUS GALIZA</span><span>Divisão: MATRIZ</span><span>Setor: o NAJ não tem setores cadastrados</span></div>
+
+      <div class="err" id="formErr" role="alert" hidden></div>
+      <button class="primary" type="submit" id="salvar">Enviar para a fila</button>
+    </form>
+  </section>
+
+  <section id="paneLista" hidden>
+    <div class="filters" id="filters"></div>
+    <div class="list" id="list">
+      <div class="empty"><b>Carregando lançamentos…</b><span>Os lançamentos enviados aparecem aqui com o status do NAJ.</span></div>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const AREAS = ["AMBIENTAL","CÍVEL","COMPLIANCE","CONSUMIDOR","CRIMINAL","DILIGÊNCIAS","DIREITO ADMINISTRATIVO","DIREITO ADMINISTRATIVO/PÚBLICO","DIREITO DIGITAL","FAMÍLIA","GERAL","PI CONCORRÊNCIA DESLEAL","PROCEDIMENTOS INTERNOS","RECUPERAÇÃO JUDICIAL E FALÊNCIA 11.101/05","SOCIETÁRIO","TRABALHISTA","TRIBUTÁRIA"];
+const TIPOS = [["CONTRATOS FIXOS","100"],["PROPOSTA FECHADA","200"],["HORAS ADMINISTRATIVAS (MKS)","300"]];
+const STATUS = { pendente: "Na fila", processando: "Lançando agora", erro: "Precisa de você", lancado: "Lançado no NAJ" };
+const $ = id => document.getElementById(id);
+
+let db = null, col = null, rows = [], filtro = "todos", editId = null, confirmDel = null;
+
+// ---------- formulário ----------
+$("area").innerHTML = '<option value="">Selecione…</option>' + AREAS.map(a => `<option>${a}</option>`).join("");
+$("tipos").innerHTML = TIPOS.map(([t, c], i) => `<label><input type="radio" name="tipo" value="${t}" id="tipo${c}"> ${t} <small>${c}</small></label>`).join("");
+
+const hoje = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const agora = () => new Date().toTimeString().slice(0, 5);
+const min = t => { const [h, m] = (t || "").split(":").map(Number); return h * 60 + m; };
+const fmtDur = m => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+const dataBR = iso => iso ? iso.split("-").reverse().join("/") : "";
+
+function limpar() {
+  editId = null;
+  $("form").reset();
+  $("data").value = hoje();
+  $("disp").checked = true;
+  $("editing").hidden = true;
+  $("salvar").textContent = "Enviar para a fila";
+  $("formErr").hidden = true;
+  atualizarDur();
+}
+function atualizarDur() {
+  const a = $("inicio").value, b = $("termino").value;
+  const d = a && b ? min(b) - min(a) : 0;
+  $("dur").textContent = d > 0 ? fmtDur(d) : "00:00";
+  $("duration").classList.toggle("badtime", !!(a && b && d <= 0));
+}
+["inicio", "termino"].forEach(id => $(id).addEventListener("input", atualizarDur));
+$("agora").onclick = () => { $("termino").value = agora(); atualizarDur(); };
+$("cancelEdit").onclick = limpar;
+
+function lerForm() {
+  return {
+    cliente: $("cliente").value.trim(),
+    processo: $("processo").value.trim(),
+    area: $("area").value,
+    tipo: (document.querySelector('input[name="tipo"]:checked') || {}).value || "",
+    descricao: $("descricao").value.trim(),
+    data: $("data").value,
+    inicio: $("inicio").value,
+    termino: $("termino").value,
+    disponivelCliente: $("disp").checked,
+  };
+}
+function validar(v) {
+  const falta = [];
+  if (!v.cliente) falta.push("cliente");
+  if (!v.area) falta.push("área jurídica");
+  if (!v.tipo) falta.push("tipo de atividade");
+  if (!v.descricao) falta.push("descrição");
+  if (!v.data) falta.push("data");
+  if (!v.inicio) falta.push("horário de início");
+  if (!v.termino) falta.push("horário de término");
+  if (falta.length) return "Preencha: " + falta.join(", ") + ".";
+  if (min(v.termino) <= min(v.inicio)) return "O horário de término precisa ser depois do início.";
+  if (v.processo && v.processo.replace(/\D/g, "").length < 7) return "O número do processo parece incompleto. Deixe em branco para lançar só pelo cliente.";
+  return "";
+}
+
+$("form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const v = lerForm(), msg = validar(v);
+  $("formErr").hidden = !msg; $("formErr").textContent = msg;
+  if (msg) return;
+  if (!col) { toast("Sem conexão: não foi possível salvar."); return; }
+  $("salvar").disabled = true;
+  const agoraISO = new Date().toISOString();
+  const corpo = { ...v, status: "pendente", mensagem: "", candidatos: [], atualizadoEm: agoraISO };
+  try {
+    if (editId) {
+      await col.doc(editId).update(corpo);
+      toast("Lançamento corrigido e devolvido à fila.");
+    } else {
+      await col.add({ ...corpo, criadoEm: agoraISO });
+      toast("Enviado para a fila. O robô lança na próxima hora cheia.");
+    }
+    const manter = { area: v.area, tipo: v.tipo, data: v.data, termino: v.termino };
+    limpar();
+    // facilita o próximo lançamento: área, tipo e data se repetem; o início vira o término anterior
+    $("area").value = manter.area; $("data").value = manter.data; $("inicio").value = manter.termino;
+    const r = document.querySelector(`input[name="tipo"][value="${manter.tipo}"]`); if (r) r.checked = true;
+    atualizarDur();
+  } catch (e) {
+    toast(e && e.code === "quota_exceeded" ? "O armazenamento está cheio. Apague lançamentos antigos." : "Não consegui salvar. Tente de novo.");
+  } finally { $("salvar").disabled = false; }
+});
+
+function editar(r) {
+  editId = r.id;
+  $("cliente").value = r.cliente || ""; $("processo").value = r.processo || "";
+  $("area").value = r.area || ""; $("data").value = r.data || hoje();
+  $("descricao").value = r.descricao || ""; $("inicio").value = r.inicio || ""; $("termino").value = r.termino || "";
+  $("disp").checked = r.disponivelCliente !== false;
+  document.querySelectorAll('input[name="tipo"]').forEach(x => x.checked = x.value === r.tipo);
+  $("editing").hidden = false;
+  $("editingTxt").textContent = r.status === "erro" ? "Corrigindo lançamento com problema" : "Editando lançamento na fila";
+  $("salvar").textContent = "Salvar e devolver à fila";
+  atualizarDur(); abrirAba("novo"); $("cliente").focus();
+}
+
+// ---------- lista ----------
+function abrirAba(qual) {
+  $("tabNovo").setAttribute("aria-selected", qual === "novo");
+  $("tabLista").setAttribute("aria-selected", qual === "lista");
+  $("paneNovo").hidden = qual !== "novo"; $("paneLista").hidden = qual !== "lista";
+  try { localStorage.setItem("aba", qual); } catch {}
+}
+$("tabNovo").onclick = () => abrirAba("novo");
+$("tabLista").onclick = () => abrirAba("lista");
+document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => { filtro = b.dataset.go; abrirAba("lista"); render(); });
+
+function durDe(r) { const d = min(r.termino) - min(r.inicio); return d > 0 ? d : 0; }
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function render() {
+  const n = s => rows.filter(r => r.status === s).length;
+  const pend = n("pendente") + n("processando"), errs = n("erro");
+  const horasHoje = rows.filter(r => r.status === "lancado" && r.data === hoje()).reduce((a, r) => a + durDe(r), 0);
+  $("sPend").textContent = pend; $("sErr").textContent = errs; $("sHoras").textContent = fmtDur(horasHoje);
+  $("tabCount").hidden = !errs; $("tabCount").textContent = errs;
+  $("clientesUsados").innerHTML = [...new Set(rows.map(r => r.clienteNaj || r.cliente).filter(Boolean))].sort().map(c => `<option value="${esc(c)}">`).join("");
+
+  const filtros = [["todos", "Todos", rows.length], ["pendente", "Na fila", pend], ["erro", "Precisam de você", errs], ["lancado", "Lançados", n("lancado")]];
+  $("filters").innerHTML = filtros.map(([k, t, c]) => `<button type="button" aria-pressed="${filtro === k}" data-f="${k}">${t} · ${c}</button>`).join("");
+  $("filters").querySelectorAll("button").forEach(b => b.onclick = () => { filtro = b.dataset.f; render(); });
+
+  let lista = rows.filter(r => filtro === "todos" || r.status === filtro || (filtro === "pendente" && r.status === "processando"));
+  const ordem = { erro: 0, processando: 1, pendente: 2, lancado: 3 };
+  lista.sort((a, b) => (filtro === "todos" ? ordem[a.status] - ordem[b.status] : 0) || (b.data + b.inicio).localeCompare(a.data + a.inicio));
+  if (!lista.length) {
+    $("list").innerHTML = rows.length
+      ? `<div class="empty"><b>Nada aqui.</b><span>Nenhum lançamento com este status.</span></div>`
+      : `<div class="empty"><b>Nenhum lançamento ainda.</b><span>Preencha a aba “Novo lançamento”. Ele entra na fila e o robô lança no NAJ na próxima hora cheia.</span></div>`;
+    return;
+  }
+  let html = "", diaAtual = "";
+  for (const r of lista) {
+    const dia = filtro === "todos" ? "" : r.data;
+    if (dia && dia !== diaAtual) {
+      const tot = lista.filter(x => x.data === dia).reduce((a, x) => a + durDe(x), 0);
+      html += `<div class="day"><span>${dataBR(dia)}</span><span>${fmtDur(tot)}</span></div>`; diaAtual = dia;
+    }
+    const st = r.status || "pendente";
+    html += `<article class="card ${st}">
+      <div class="top"><span class="pill ${st}">${STATUS[st] || st}</span><span class="time">${dataBR(r.data)} · ${esc(r.inicio)}–${esc(r.termino)} · ${fmtDur(durDe(r))}</span></div>
+      <div class="client">${esc(r.clienteNaj || r.cliente)}</div>
+      <div class="meta">${r.processo ? `<span class="mono">${esc(r.processo)}</span> · ` : "Sem processo · "}${esc(r.area)} · ${esc(r.tipo)}${r.disponivelCliente === false ? " · oculto ao cliente" : ""}</div>
+      <div class="desc">${esc(r.descricao)}</div>
+      ${st === "erro" ? `<div class="problem"><b>${esc(r.mensagem || "O robô não conseguiu lançar.")}</b>${(r.candidatos || []).length ? `<span>Toque no cliente correto para devolver à fila:</span><div class="chips">${r.candidatos.map((c, i) => `<button type="button" data-pick="${r.id}" data-i="${i}">${esc(c)}</button>`).join("")}</div>` : ""}</div>` : ""}
+      ${st === "lancado" ? `<div class="meta">${esc(r.mensagem || "Lançado no NAJ.")}${r.processoNaj ? `<br>${esc(r.processoNaj)}` : ""}</div>` : ""}
+      ${st === "pendente" || st === "erro" ? `<div class="actions">${confirmDel === r.id
+        ? `<span class="confirm">Apagar este lançamento? <button class="ghost danger" type="button" data-delok="${r.id}">Apagar</button><button class="ghost" type="button" data-delno="1">Manter</button></span>`
+        : `<button class="ghost" type="button" data-del="${r.id}">Apagar</button><button class="ghost" type="button" data-edit="${r.id}">${st === "erro" ? "Corrigir" : "Editar"}</button>`}</div>` : ""}
+    </article>`;
+  }
+  $("list").innerHTML = html;
+}
+
+$("list").addEventListener("click", async ev => {
+  const b = ev.target.closest("button"); if (!b || !col) return;
+  const r = id => rows.find(x => x.id === id);
+  if (b.dataset.edit) editar(r(b.dataset.edit));
+  else if (b.dataset.del) { confirmDel = b.dataset.del; render(); }
+  else if (b.dataset.delno) { confirmDel = null; render(); }
+  else if (b.dataset.delok) {
+    confirmDel = null;
+    try { await col.doc(b.dataset.delok).delete(); toast("Lançamento apagado."); } catch { toast("Não consegui apagar. Tente de novo."); }
+  } else if (b.dataset.pick) {
+    const item = r(b.dataset.pick), nome = item.candidatos[+b.dataset.i];
+    try {
+      await col.doc(item.id).update({ cliente: nome, status: "pendente", mensagem: "", candidatos: [], atualizadoEm: new Date().toISOString() });
+      toast(`Cliente trocado para ${nome}. Voltou para a fila.`);
+    } catch { toast("Não consegui salvar. Tente de novo."); }
+  }
+});
+
+let toastT;
+function toast(t) { $("toast").textContent = t; $("toast").hidden = false; clearTimeout(toastT); toastT = setTimeout(() => $("toast").hidden = true, 3500); }
+
+// ---------- dados ----------
+limpar();
+try { const a = localStorage.getItem("aba"); if (a === "lista") abrirAba("lista"); } catch {}
+(async () => {
+  db = await window.claude?.use?.("db");
+  if (!db) { $("offline").hidden = false; $("list").innerHTML = `<div class="empty"><b>Sem conexão.</b><span>Abra pelo claude.ai para ver seus lançamentos.</span></div>`; return; }
+  col = db.collection("lancamentos");
+  col.onSnapshot(snap => { rows = snap.docs.map(d => ({ id: d.id, ...d.data() })); render(); },
+    () => { $("offline").hidden = false; });
+})();
+</script>
