@@ -124,7 +124,14 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
     .map(t => [...t.cells].map(c => c.innerText.trim())).filter(c => c.length >= 8 && /^\d{2}\/\d{2}\/\d{4}/.test(c[3] || '')).map(c => c.slice(3, 8)));
   const chaveDe = ([dataHora, , desc, info, usuario]) => [dataHora, usuario, desc.replace(/\s+/g, ' ').slice(0, 80), info].join('|');
   async function lerDetalhe(q, i, linha) {
-    await q.locator('img[src*="edit-row"]').filter({ visible: true }).nth(i).evaluate(e => e.click());
+    // abre pelo ícone de edição da própria linha (nem toda linha tem ícone, então não dá para contar ícones)
+    const achou = await q.$$eval('tr', (trs, i) => {
+      const rows = trs.filter(t => t.offsetParent !== null && t.cells.length >= 8 && /^\d{2}\/\d{2}\/\d{4}/.test((t.cells[3] || {}).innerText || ''));
+      const img = rows[i] && rows[i].querySelector('img[src*="edit-row"]');
+      if (img) img.click();
+      return !!img;
+    }, i);
+    if (!achou) return null;
     await quieto(q);
     const descTela = await q.locator('textarea[id^=MMDESCRICAO]').filter({ visible: true }).first().inputValue().catch(() => '');
     const v = await q.$$eval('input[type=text],select', els => Object.fromEntries(els.filter(e => e.offsetParent !== null && /^(ED|CB)[A-Z]+\d*$/.test(e.id))
@@ -133,7 +140,10 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
     await quieto(q);
     // confere que abriu a atividade certa: a descrição da tela começa como a da lista
     const curto = t => t.replace(/\s+/g, ' ').trim().slice(0, 30).replace(/\(\.\.\.\)$/, '');
-    if (curto(descTela) && curto(linha[2]) && !curto(descTela).startsWith(curto(linha[2]).slice(0, 20))) return null;
+    if (curto(descTela) && curto(linha[2]) && !curto(descTela).startsWith(curto(linha[2]).slice(0, 20))) {
+      if (process.env.DEPURAR) console.log('não conferiu:', JSON.stringify({ lista: linha[2].slice(0, 60), tela: descTela.slice(0, 60), cod: v.EDCODIGOATIVIDADE }));
+      return null;
+    }
     const area = (v.CBAREAJURIDICA || '').replace(/^\*.*\*$/, '').trim();
     return { codAtiv: v.EDCODIGOATIVIDADE || '', codProc: v.EDCODIGOPROCESSO || '', areaAtiv: area, tempo: v.EDTEMPOTOTAL || '' };
   }
@@ -151,7 +161,8 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
   async function trabalhador(t) {
     const q = await abrirLista();
     q.setDefaultTimeout(20000);
-    for (let pg = 1 + t; pg <= totalPaginas; pg += nTrab) {
+    const pgIni = Number(process.env.PAGINA_INICIAL) || 1, pgFim = Math.min(totalPaginas, Number(process.env.PAGINA_FINAL) || totalPaginas);
+    for (let pg = pgIni + t; pg <= pgFim; pg += nTrab) {
       if (pg > 1) { await q.fill('#TIWEDIT3', String(pg)); await q.press('#TIWEDIT3', 'Enter'); await quieto(q); }
       if (await q.inputValue('#TIWEDIT3') !== String(pg)) throw new Error(`Não consegui abrir a página ${pg} da lista de atividades.`);
       let linhas = await lerLinhas(q);
