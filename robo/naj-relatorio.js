@@ -59,21 +59,29 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
 }
 
 (async () => {
-  const [saida, de, ate] = process.argv.slice(2);
+  const [saida, de] = process.argv.slice(2);
+  const ate = /^\d{2}\/\d{2}\/\d{4}$/.test(process.argv[4] || '') ? process.argv[4] : null;
   if (!saida || !/^\d{2}\/\d{2}\/\d{4}$/.test(de || '')) { console.error('Uso: node robo/naj-relatorio.js <pasta> <DD/MM/AAAA> [DD/MM/AAAA]'); process.exit(1); }
   const hojeBR = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
   fs.mkdirSync(saida, { recursive: true });
   const browser = await chromium.launch();
 
-  // 1) área de cada processo (todas as situações), no módulo Processos; o cadastro em branco que ele abre nunca é gravado
+  // 1) área de cada processo (todas as situações), no módulo Processos; o cadastro em branco que ele abre nunca é gravado.
+  //    --reusar-areas <processos-areas.json> aproveita uma leitura recente.
+  const iAreas = process.argv.indexOf('--reusar-areas');
+  let procs;
+  if (iAreas > 0) {
+    procs = JSON.parse(fs.readFileSync(process.argv[iAreas + 1], 'utf8')).map(([cod, num, cli, contr, area]) => ['', cod, num, cli, contr, area]);
+  } else {
   let p = await entrar(browser, 'Processos');
   await p.selectOption('#TIWCOMBOBOX2', { index: 0 }); // "* Todas as Situações *"
   await quieto(p);
   await p.locator('#TIWGRADBUTTON3').evaluate(e => e.click());
   await quieto(p);
-  const procs = await paginar(p, '#TIWEDIT22', '#TIWEDIT23', () => p.$$eval('tr', trs => trs.filter(t => t.offsetParent !== null)
+  procs = await paginar(p, '#TIWEDIT22', '#TIWEDIT23', () => p.$$eval('tr', trs => trs.filter(t => t.offsetParent !== null)
     .map(t => [...t.cells].map(c => c.innerText.trim())).filter(c => c.length >= 10 && /^\d+$/.test(c[1]))), 'processos');
   await p.context().close();
+  }
   // a área do processo é o campo "Advogado do Cliente" do cadastro (coluna 5 da pesquisa)
   const areaPorNumero = new Map(), areaPorPartes = new Map(), areas = new Map();
   const juntar = (mapa, chave, area) => { const s = mapa.get(chave) || new Set(); s.add(area); mapa.set(chave, s); };
