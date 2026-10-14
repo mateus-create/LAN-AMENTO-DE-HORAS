@@ -3,7 +3,7 @@
 // entrada.json: [{ id, cliente, clienteCod?, processo?, processoCod?, area, tipo, descricao, data (AAAA-MM-DD), inicio (HH:MM), termino (HH:MM), disponivelCliente }]
 // saida.json:   [{ id, status: "lancado"|"erro"|"teste_ok", mensagem, clienteNaj?, processoNaj?, candidatos?, print? }]
 // Com --teste preenche a tela inteira mas NÃO clica em Gravar.
-// Credenciais: variáveis de ambiente NAJ_URL, NAJ_USUARIO, NAJ_SENHA.
+// Credenciais: NAJ_URL; por lançamento, najLogin + a variável de ambiente senhaVar com a senha (padrão: NAJ_USUARIO/NAJ_SENHA).
 const fs = require('fs');
 const path = require('path');
 let chromium;
@@ -18,7 +18,7 @@ class ErroLancamento extends Error {
   constructor(mensagem, candidatos) { super(mensagem); this.candidatos = candidatos; }
 }
 
-async function entrar(browser) {
+async function entrar(browser, cred) {
   const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
   const p = await ctx.newPage();
   // conta requisições em andamento: o NAJ responde a cada campo com uma chamada ao servidor
@@ -27,8 +27,8 @@ async function entrar(browser) {
   p.on('requestfinished', () => p.pendentes--);
   p.on('requestfailed', () => p.pendentes--);
   await p.goto(process.env.NAJ_URL, { waitUntil: 'networkidle' });
-  await p.fill('#login', process.env.NAJ_USUARIO);
-  await p.fill('#password', process.env.NAJ_SENHA);
+  await p.fill('#login', cred.login);
+  await p.fill('#password', cred.senha);
   await p.click('button:has-text("Entrar")');
   await p.waitForSelector('button.button-acessar-adv');
   await espera(500);
@@ -38,7 +38,7 @@ async function entrar(browser) {
   await espera(3000);
   const ok = p.locator('button:visible:has-text("OK")');
   if (await ok.count()) await ok.first().click();
-  await p.fill('#txtsenha', process.env.NAJ_SENHA);
+  await p.fill('#txtsenha', cred.senha);
   await p.click('#btentrar');
   await p.waitForLoadState('networkidle').catch(() => {});
   await espera(5000);
@@ -291,7 +291,12 @@ async function lancar(p, e, teste, pastaPrints) {
   for (const e of itens) {
     // uma sessão nova do NAJ por lançamento, para nenhum item herdar janelas abertas do anterior
     try {
-      p = await entrar(browser);
+      if (e.erroConfig) throw new ErroLancamento(e.erroConfig);
+      // cada pessoa lança com o próprio login do NAJ; a senha fica numa variável do ambiente (nunca no formulário)
+      const varSenha = e.senhaVar || 'NAJ_SENHA';
+      const cred = { login: e.najLogin || process.env.NAJ_USUARIO, senha: process.env[varSenha] };
+      if (!cred.login || !cred.senha) throw new ErroLancamento(`A senha do NAJ de ${e.najLogin || 'este usuário'} ainda não foi configurada pelo administrador.`);
+      p = await entrar(browser, cred);
       resultados.push({ id: e.id, ...(await lancar(p, e, teste, pastaPrints)) });
     } catch (err) {
       const mensagem = err instanceof ErroLancamento ? err.message : `Falha técnica no robô: ${err.message.split('\n')[0]}`;

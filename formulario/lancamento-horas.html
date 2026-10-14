@@ -261,6 +261,31 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
 .timer select { min-width: 0; max-width: 100%; text-overflow: ellipsis }
 @media (max-width: 860px) { .tsgrid { grid-template-columns: minmax(0, 1fr) } .wk { gap: 4px } .wk b { font-size: .76rem } }
 
+.filtros-rel { display: flex; flex-wrap: wrap; gap: 12px; align-items: end }
+.filtros-rel .field { min-width: 150px; flex: 1 }
+.grid2.even { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) }
+.tabwrap { overflow-x: auto }
+.mtx { border-collapse: collapse; width: 100%; font-size: .82rem }
+.mtx th, .mtx td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap }
+.mtx th:first-child, .mtx td:first-child { text-align: left; white-space: normal; min-width: 160px }
+.mtx th { color: var(--muted); font-weight: 700; font-size: .74rem; text-transform: uppercase; letter-spacing: .04em }
+.mtx tr.click { cursor: pointer } .mtx tr.click:hover td { background: var(--sunken) }
+.mtx .tot td { font-weight: 800 }
+.mapa { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px }
+.mapa label { display: grid; gap: 4px; font-size: .78rem; font-weight: 600; background: var(--sunken); border-radius: 10px; padding: 8px 10px }
+.mapa small { color: var(--muted); font-weight: 500 }
+.passos { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; font-size: .86rem }
+.pessoa { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); margin-bottom: 10px }
+.pessoa .topo { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center }
+.pessoa .grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px }
+.nucs { display: flex; flex-wrap: wrap; gap: 6px }
+.nucs label { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; font-size: .8rem; cursor: pointer }
+.nucs input { width: auto }
+.varbox { font-size: .78rem; background: var(--sunken); border-radius: 9px; padding: 8px 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
+.varbox code { font-weight: 700; user-select: all }
+.ok-t { color: var(--ok); font-weight: 700 } .no-t { color: var(--warn); font-weight: 700 }
+@media (max-width: 860px) { .grid2.even { grid-template-columns: 1fr } }
+
 .offline { background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 12px; font-size: .85rem; font-weight: 600 }
 .toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: 12px; font-size: .88rem; font-weight: 600; z-index: 30; max-width: calc(100% - 32px); box-shadow: 0 8px 24px rgb(0 0 0 / .2) }
 
@@ -269,7 +294,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
   .shell { grid-template-columns: 1fr }
   .side { position: fixed; z-index: 20; top: auto; bottom: 0; left: 0; right: 0; height: auto; padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)); flex-direction: row; gap: 0 }
   .side .logo, .side-foot { display: none }
-  .nav { grid-template-columns: repeat(4, 1fr); width: 100%; gap: 2px }
+  .nav { grid-auto-flow: column; grid-auto-columns: 1fr; width: 100%; gap: 2px }
   .nav button { flex-direction: column; gap: 3px; font-size: .7rem; padding: 7px 4px; justify-content: center; align-items: center; position: relative; text-align: center }
   .nav .badge { position: absolute; top: 2px; right: calc(50% - 22px); margin: 0; font-size: .62rem; padding: 0 5px }
   main { padding-inline: 16px; padding-block: 16px 100px; gap: 16px }
@@ -308,6 +333,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
       <button type="button" data-view="lista">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg>
         <span>Lançamentos</span><span class="badge" id="navBadge" hidden></span></button>
+      <button type="button" data-view="adm" id="navAdm" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg>
+        <span>Equipe</span></button>
     </nav>
     <div class="side-foot">
       <span class="live"><i></i>Robô ativo</span>
@@ -323,8 +351,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
     <section id="v-painel" class="view">
       <div style="display:grid;gap:18px">
         <div class="hero">
-          <div class="avatar">MG</div>
-          <div class="hero-txt"><small>MKS – Advocacia Empresarial · NAJ</small><b>Mateus Galiza</b></div>
+          <div class="avatar" id="heroAvatar">··</div>
+          <div class="hero-txt"><small id="heroSub">MKS – Advocacia Empresarial · NAJ</small><b id="heroName">Olá</b></div>
           <button class="btn light" type="button" data-view="novo">+ Novo lançamento</button>
         </div>
 
@@ -430,7 +458,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
               <input id="disp" type="checkbox" checked>
             </div>
 
-            <div class="fixed full"><span>Usuário <b>MATEUS GALIZA</b></span><span>Divisão <b>MATRIZ</b></span><span>Setor <b>não usado no NAJ</b></span></div>
+            <div class="fixed full"><span>Usuário no NAJ <b id="fixUser">o seu login</b></span><span>Divisão <b>MATRIZ</b></span><span>Setor <b>não usado no NAJ</b></span></div>
           </div>
 
           <div class="err" id="formErr" role="alert" hidden></div>
@@ -519,6 +547,64 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
       </div>
     </section>
 
+    <!-- EQUIPE (administrador) -->
+    <section id="v-adm" class="view" hidden>
+      <div style="display:grid;gap:18px">
+        <div class="page-head"><div><div class="crumb">Administração</div><h1>Equipe</h1></div>
+          <div class="seg-tabs" id="admTabs"><button type="button" data-adm="rel" aria-pressed="true">Relatórios</button><button type="button" data-adm="lan" aria-pressed="false">Lançamentos</button><button type="button" data-adm="pes" aria-pressed="false">Pessoas</button></div></div>
+
+        <!-- relatórios -->
+        <div id="adm-rel" style="display:grid;gap:14px">
+          <div class="card filtros-rel">
+            <div class="field"><label for="rPeriodo">Período</label><select id="rPeriodo"><option value="mes">Este mês</option><option value="mesant">Mês passado</option><option value="30">Últimos 30 dias</option><option value="sem">Esta semana</option><option value="custom">Escolher datas</option></select></div>
+            <div class="field" id="rDatas" hidden><label>De / até</label><span style="display:flex;gap:6px"><input type="date" id="rDe"><input type="date" id="rAte"></span></div>
+            <div class="field"><label for="rNucleo">Núcleo</label><select id="rNucleo"></select></div>
+            <div class="field"><label for="rUsuario">Pessoa</label><select id="rUsuario"></select></div>
+            <button class="ghost" type="button" id="rCsv" hidden>Baixar planilha (CSV)</button>
+          </div>
+          <div class="hint" id="rFonte">Carregando o relatório do NAJ…</div>
+          <div class="kpis">
+            <div class="kpi"><span>Horas lançadas</span><b id="rkHoras">–</b></div>
+            <div class="kpi"><span>Atividades</span><b id="rkAtiv">–</b></div>
+            <div class="kpi bad"><span>Atividades sem tempo</span><b id="rkSem">–</b></div>
+            <div class="kpi"><span>Pessoas com lançamento</span><b id="rkPes">–</b></div>
+          </div>
+          <div class="grid2 even">
+            <div class="card"><div class="card-head"><h2>Horas por pessoa</h2></div><div class="byclient" id="rPorPessoa"></div></div>
+            <div class="card"><div class="card-head"><h2>Horas por núcleo</h2></div><div class="byclient" id="rPorNucleo"></div></div>
+          </div>
+          <div class="card"><div class="card-head"><h2>Pessoa × núcleo</h2></div><div class="tabwrap"><table class="mtx" id="rMatriz"></table></div></div>
+          <details class="card"><summary><b>Qual núcleo cada área do processo representa</b> <span class="hint">— a área vem do cadastro do processo no NAJ</span></summary>
+            <div class="hint" style="margin:10px 0">Atividades sem processo, ou de processo sem área, contam no núcleo principal da pessoa.</div>
+            <div class="mapa" id="rMapa"></div>
+            <div class="field" style="margin-top:12px"><label for="rNucleosLista">Núcleos do escritório (separados por vírgula)</label><input id="rNucleosLista"></div>
+            <div class="form-foot"><button class="btn" type="button" id="rMapaSalvar">Salvar</button></div>
+          </details>
+        </div>
+
+        <!-- lançamentos da equipe -->
+        <div id="adm-lan" hidden style="display:grid;gap:14px">
+          <div class="card"><div class="card-head"><h2>Situação de cada pessoa</h2><span class="hint">Lançamentos feitos por este sistema</span></div>
+            <div class="tabwrap"><table class="mtx" id="lTabela"></table></div></div>
+          <div class="card" id="lDetalhe" hidden><div class="card-head"><h2 id="lDetTitulo"></h2><button class="link" type="button" id="lFechar">Fechar</button></div><div class="rows" id="lDetLista"></div></div>
+        </div>
+
+        <!-- pessoas -->
+        <div id="adm-pes" hidden style="display:grid;gap:14px">
+          <div class="card">
+            <h2>Como adicionar alguém</h2>
+            <ol class="passos">
+              <li>Compartilhe esta página com a pessoa (botão <b>Compartilhar</b>, no topo) como <b>Colaborador</b>; administradores, como <b>Editor</b>.</li>
+              <li>Peça para ela abrir a página uma vez. Ela aparece na lista abaixo.</li>
+              <li>Ligue a pessoa ao usuário e ao login dela no NAJ e marque os núcleos.</li>
+              <li>Peça a quem administra o ambiente do robô para guardar a senha do NAJ dela na variável indicada. A senha nunca passa por esta página.</li>
+            </ol>
+          </div>
+          <div class="rows" id="pLista"><div class="empty"><b>Ninguém abriu a página ainda.</b></div></div>
+        </div>
+      </div>
+    </section>
+
     <!-- LISTA -->
     <section id="v-lista" class="view" hidden>
       <div style="display:grid;gap:18px">
@@ -543,6 +629,8 @@ const STATUS = { pendente: "Na fila", processando: "Lançando agora", erro: "Pre
 const $ = id => document.getElementById(id);
 
 let col = null, rows = [], filtro = "todos", editId = null, confirmDel = null;
+// cada pessoa guarda os próprios dados em equipe/<id dela>; administradores leem os de todos
+let base = "", meuId = null, souAdmin = false, souDono = false, userCap = null, dbRef = null;
 // cadastros do NAJ baixados pelo robô: clientes [código, nome, CPF/CNPJ] e processos [código, cliente, parte contrária, número, "comarca · classe"]
 let CLI = [], PROC = [], cadOk = false;
 const procPorCod = new Map(), cliPorNome = new Map();
@@ -1151,10 +1239,207 @@ $("tsList").addEventListener("click", async ev => {
 });
 
 function vigiarTimesheet(db) {
-  tsCol = db.collection("timesheet_registros");
-  tsAtivoRef = db.doc("timesheet/ativo");
+  tsCol = db.collection(base + "/timesheet");
+  tsAtivoRef = db.doc(base + "/cronometro/ativo");
   tsAtivoRef.onSnapshot(s => { ativo = s.exists && s.data().estado ? s.data() : null; renderTimer(); }, () => {});
   tsCol.onSnapshot(s => { registros = s.docs.map(d => ({ id: d.id, ...d.data() })); renderRegistros(); if (!ativo) renderRecentes(); }, () => {});
+}
+
+// ---------- equipe e administração ----------
+const NUCLEOS_PADRAO = ["Cível", "Tributário", "Penal", "Trabalhista", "Contratos"];
+let membros = [], cfgMembros = {}, cfgNucleos = { lista: NUCLEOS_PADRAO, mapa: {} }, cfgRobo = {}, relInfo = null, relItens = [], nomes = {};
+const lanEquipe = {}; // id da pessoa -> lançamentos
+const nucleosLista = () => (cfgNucleos.lista && cfgNucleos.lista.length ? cfgNucleos.lista : NUCLEOS_PADRAO);
+const varSenha = login => "NAJ_SENHA_" + (login || "").toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
+let admAba = "rel";
+
+$("admTabs").addEventListener("click", ev => {
+  const b = ev.target.closest("[data-adm]"); if (!b) return;
+  admAba = b.dataset.adm;
+  $("admTabs").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  ["rel", "lan", "pes"].forEach(k => $("adm-" + k).hidden = k !== admAba);
+  renderAdm();
+});
+
+async function carregarNomes(ids) {
+  const faltam = ids.filter(id => !(id in nomes));
+  if (!faltam.length || !userCap) return;
+  const ps = await userCap.profiles(faltam);
+  for (const id of faltam) nomes[id] = ps[id] || { name: "", email: null };
+}
+const nomeDe = id => (nomes[id] && (nomes[id].name || nomes[id].email)) || (cfgMembros[id] && cfgMembros[id].najUsuario) || "Pessoa sem nome";
+
+function vigiarAdmin(db) {
+  db.collection("equipe").onSnapshot(async s => {
+    membros = s.docs.map(d => ({ id: d.id, ...d.data() }));
+    await carregarNomes(membros.map(m => m.id));
+    for (const m of membros) if (!lanEquipe[m.id]) {
+      lanEquipe[m.id] = [];
+      db.collection(`equipe/${m.id}/lancamentos`).onSnapshot(x => { lanEquipe[m.id] = x.docs.map(d => ({ id: d.id, ...d.data() })); if (admAba === "lan") renderLan(); }, () => {});
+    }
+    renderAdm();
+  }, () => {});
+  db.doc("config/membros").onSnapshot(s => { cfgMembros = (s.exists && s.data().pessoas) || {}; renderAdm(); }, () => {});
+  db.doc("config/nucleos").onSnapshot(s => { if (s.exists) cfgNucleos = { lista: NUCLEOS_PADRAO, mapa: {}, ...s.data() }; renderAdm(); }, () => {});
+  db.doc("config/robo").onSnapshot(s => { cfgRobo = s.exists ? s.data() : {}; if (admAba === "pes") renderPessoas(); }, () => {});
+  db.doc("relatorio/info").onSnapshot(async s => {
+    relInfo = s.exists ? s.data() : null;
+    relItens = [];
+    if (relInfo) for (const id of relInfo.documentos || []) {
+      try { const d = await db.doc("relatorio/" + id).get(); if (d.exists) relItens.push(...d.data().itens); } catch {}
+    }
+    renderAdm();
+  }, () => {});
+}
+
+function renderAdm() {
+  if (!souAdmin) return;
+  if (admAba === "rel") renderRel(); else if (admAba === "lan") renderLan(); else renderPessoas();
+}
+
+// relatórios: atividades de todos os usuários baixadas do NAJ pelo robô
+function periodo() {
+  const v = $("rPeriodo").value, d = new Date(), iso = x => isoDia(x);
+  $("rDatas").hidden = v !== "custom";
+  if (v === "mes") return [iso(new Date(d.getFullYear(), d.getMonth(), 1)), hoje()];
+  if (v === "mesant") return [iso(new Date(d.getFullYear(), d.getMonth() - 1, 1)), iso(new Date(d.getFullYear(), d.getMonth(), 0))];
+  if (v === "30") { const x = new Date(); x.setDate(x.getDate() - 29); return [iso(x), hoje()]; }
+  if (v === "sem") return [inicioSemana(), hoje()];
+  return [$("rDe").value || hoje(), $("rAte").value || hoje()];
+}
+function nucleoDe(a) {
+  // a = [data, hora, minutos, usuário NAJ, cliente, número, área do processo, descrição]
+  const n = a[6] && cfgNucleos.mapa[a[6]];
+  if (n) return n;
+  const m = Object.values(cfgMembros).find(x => x.najUsuario === a[3]);
+  return (m && m.principal) || "Sem núcleo";
+}
+let relFiltrado = [];
+function renderRel() {
+  const [de, ate] = periodo();
+  const nucs = [...nucleosLista(), "Sem núcleo"];
+  const usuarios = [...new Set(relItens.map(a => a[3]))].sort();
+  const keepN = $("rNucleo").value, keepU = $("rUsuario").value;
+  $("rNucleo").innerHTML = '<option value="">Todos</option>' + nucs.map(n => `<option>${esc(n)}</option>`).join("");
+  $("rUsuario").innerHTML = '<option value="">Todas</option>' + usuarios.map(u => `<option>${esc(u)}</option>`).join("");
+  $("rNucleo").value = keepN; $("rUsuario").value = keepU;
+  if (!relInfo) { $("rFonte").textContent = "O relatório ainda não foi baixado do NAJ. O robô atualiza todo dia de manhã."; }
+  else $("rFonte").textContent = `Dados do NAJ (todos os usuários), de ${dataBR(relInfo.de)} até ${dataBR(relInfo.ate)}, atualizados em ${new Date(relInfo.atualizadoEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}. Inclui o que foi lançado direto no NAJ.`;
+  relFiltrado = relItens.filter(a => a[0] >= de && a[0] <= ate && (!keepU || a[3] === keepU) && (!keepN || nucleoDe(a) === keepN));
+  const tot = relFiltrado.reduce((x, a) => x + a[2], 0);
+  $("rkHoras").textContent = fmtDur(tot);
+  $("rkAtiv").textContent = relFiltrado.length.toLocaleString("pt-BR");
+  $("rkSem").textContent = relFiltrado.filter(a => !a[2]).length.toLocaleString("pt-BR");
+  $("rkPes").textContent = new Set(relFiltrado.map(a => a[3])).size;
+  const barras = (el, chave) => {
+    const g = {};
+    relFiltrado.forEach(a => { const k = chave(a); g[k] = g[k] || [0, 0, 0]; g[k][0] += a[2]; g[k][1]++; if (!a[2]) g[k][2]++; });
+    const top = Object.entries(g).sort((x, y) => y[1][0] - x[1][0]);
+    const max = top.length ? Math.max(1, top[0][1][0]) : 1;
+    $(el).innerHTML = top.length ? top.map(([k, [m, n, z]]) => `<div><span>${esc(k)} <span class="hint">· ${n} atividade${n > 1 ? "s" : ""}${z ? `, ${z} sem tempo` : ""}</span></span><b>${fmtDur(m)}</b><i style="--w:${Math.round(m / max * 100)}%"></i></div>`).join("") : '<span class="hint">Nada no período.</span>';
+  };
+  barras("rPorPessoa", a => a[3]);
+  barras("rPorNucleo", nucleoDe);
+  const pessoas = [...new Set(relFiltrado.map(a => a[3]))].sort();
+  const cel = (u, n) => relFiltrado.filter(a => (!u || a[3] === u) && (!n || nucleoDe(a) === n)).reduce((x, a) => x + a[2], 0);
+  $("rMatriz").innerHTML = pessoas.length ? `<tr><th>Pessoa</th>${nucs.map(n => `<th>${esc(n)}</th>`).join("")}<th>Total</th></tr>` +
+    pessoas.map(u => `<tr><td>${esc(u)}</td>${nucs.map(n => { const m = cel(u, n); return `<td>${m ? fmtDur(m) : "–"}</td>`; }).join("")}<td><b>${fmtDur(cel(u, ""))}</b></td></tr>`).join("") +
+    `<tr class="tot"><td>Total</td>${nucs.map(n => `<td>${fmtDur(cel("", n))}</td>`).join("")}<td>${fmtDur(tot)}</td></tr>` : '<tr><td class="hint">Nada no período.</td></tr>';
+  // mapa área → núcleo
+  if (!$("rMapa").contains(document.activeElement)) {
+    const areas = (relInfo && relInfo.areas) || [];
+    $("rMapa").innerHTML = areas.length ? areas.map(([ar, qt], i) => `<label>${esc(ar)} <small>${qt} processos</small><select data-area="${i}"><option value="">Núcleo principal da pessoa</option>${nucleosLista().map(n => `<option ${cfgNucleos.mapa[ar] === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`).join("") : '<span class="hint">As áreas aparecem depois que o robô baixar o relatório.</span>';
+    if (document.activeElement !== $("rNucleosLista")) $("rNucleosLista").value = nucleosLista().join(", ");
+  }
+}
+["rPeriodo", "rDe", "rAte", "rNucleo", "rUsuario"].forEach(id => $(id).addEventListener("change", renderRel));
+$("rMapaSalvar").onclick = async () => {
+  const areas = (relInfo && relInfo.areas) || [], mapa = {};
+  $("rMapa").querySelectorAll("select").forEach(s => { if (s.value) mapa[areas[+s.dataset.area][0]] = s.value; });
+  const lista = $("rNucleosLista").value.split(",").map(x => x.trim()).filter(Boolean);
+  try { await dbRef.doc("config/nucleos").set({ lista: lista.length ? lista : NUCLEOS_PADRAO, mapa }); toast("Núcleos salvos."); } catch { toast("Não consegui salvar. Tente de novo."); }
+};
+let downloads = null;
+$("rCsv").onclick = async () => {
+  const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const linhas = [["Data", "Hora", "Minutos", "Horas", "Pessoa", "Núcleo", "Área do processo", "Cliente", "Processo", "Descrição"].map(q).join(";")]
+    .concat(relFiltrado.map(a => [dataBR(a[0]), a[1], a[2], fmtDur(a[2]), a[3], nucleoDe(a), a[6], a[4], a[5], a[7]].map(q).join(";")));
+  const [de, ate] = periodo();
+  try { await downloads.save({ filename: `horas-${de}-a-${ate}.csv`, data: "﻿" + linhas.join("\r\n") }); }
+  catch (e) { if (e && e.code !== "cancelled") toast("Não consegui gerar a planilha."); }
+};
+
+// lançamentos feitos pelo sistema, por pessoa
+function renderLan() {
+  const h = hoje(), sem = inicioSemana();
+  const linhasT = membros.map(m => {
+    const l = lanEquipe[m.id] || [];
+    const c = s => l.filter(r => r.status === s).length;
+    const horas = f => l.filter(f).reduce((a, r) => a + durDe(r), 0);
+    return { m, fila: c("pendente") + c("processando"), erro: c("erro"), hoje: horas(r => r.status === "lancado" && r.data === h), semana: horas(r => r.status === "lancado" && r.data >= sem), total: l.length };
+  }).sort((a, b) => b.erro - a.erro || b.fila - a.fila || nomeDe(a.m.id).localeCompare(nomeDe(b.m.id)));
+  $("lTabela").innerHTML = `<tr><th>Pessoa</th><th>Na fila</th><th>Precisam de atenção</th><th>Lançado hoje</th><th>Na semana</th></tr>` +
+    (linhasT.length ? linhasT.map(x => `<tr class="click" data-pessoa="${esc(x.m.id)}"><td>${esc(nomeDe(x.m.id))}${cfgMembros[x.m.id] ? `<div class="hint">${esc(cfgMembros[x.m.id].najUsuario || "")}</div>` : '<div class="hint no-t">sem usuário do NAJ</div>'}</td><td>${x.fila}</td><td>${x.erro ? `<span class="no-t">${x.erro}</span>` : 0}</td><td>${fmtDur(x.hoje)}</td><td>${fmtDur(x.semana)}</td></tr>`).join("") : '<tr><td class="hint">Ninguém abriu a página ainda.</td></tr>');
+}
+$("lTabela").addEventListener("click", ev => {
+  const tr = ev.target.closest("[data-pessoa]"); if (!tr) return;
+  const id = tr.dataset.pessoa, l = [...(lanEquipe[id] || [])].sort((a, b) => (b.data + b.inicio).localeCompare(a.data + a.inicio)).slice(0, 30);
+  $("lDetTitulo").textContent = nomeDe(id);
+  $("lDetLista").innerHTML = l.length ? l.map(r => linha(r, false).replace(/<div class="acts">[\s\S]*?<\/div>/, '<div class="acts"></div>')).join("") : '<div class="empty"><b>Nenhum lançamento.</b></div>';
+  $("lDetalhe").hidden = false;
+});
+$("lFechar").onclick = () => $("lDetalhe").hidden = true;
+
+// pessoas: ligação com o NAJ e núcleos
+function renderPessoas() {
+  if ($("pLista").contains(document.activeElement)) return;
+  const usuariosNaj = (relInfo && relInfo.usuarios) || [];
+  const senhas = new Set(cfgRobo.senhas || []);
+  $("pLista").innerHTML = membros.length ? membros.map(m => {
+    const c = cfgMembros[m.id] || {};
+    const v = c.najLogin ? varSenha(c.najLogin) : "";
+    const status = m.dono ? '<span class="ok-t">usa a senha principal do robô</span>' : !v ? '<span class="no-t">informe o login do NAJ</span>' : senhas.has(v) ? '<span class="ok-t">senha configurada</span>' : '<span class="no-t">senha ainda não configurada</span>';
+    return `<div class="pessoa" data-p="${esc(m.id)}">
+      <div class="topo"><div><b>${esc(nomeDe(m.id))}</b>${nomes[m.id] && nomes[m.id].email ? `<div class="hint">${esc(nomes[m.id].email)}</div>` : ""}</div>${m.dono ? '<span class="pill lancado">Dono</span>' : ""}</div>
+      <div class="grade">
+        <div class="field"><label>Usuário no NAJ</label><select data-k="najUsuario"><option value="">Escolha…</option>${usuariosNaj.map(u => `<option ${c.najUsuario === u ? "selected" : ""}>${esc(u)}</option>`).join("")}</select></div>
+        <div class="field"><label>Login do NAJ (e-mail de acesso)</label><input data-k="najLogin" value="${esc(c.najLogin || "")}" autocomplete="off"></div>
+        <div class="field"><label>Núcleo principal</label><select data-k="principal"><option value="">Escolha…</option>${nucleosLista().map(n => `<option ${c.principal === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
+      </div>
+      <div class="field"><label>Núcleos em que trabalha</label><div class="nucs">${nucleosLista().map(n => `<label><input type="checkbox" data-nuc="${esc(n)}" ${(c.nucleos || []).includes(n) ? "checked" : ""}>${esc(n)}</label>`).join("")}<label><input type="checkbox" data-k="todos" ${c.todos ? "checked" : ""}>Todos os núcleos</label></div></div>
+      <div class="varbox">${m.dono ? "" : v ? `Senha do NAJ: variável <code>${esc(v)}</code> no ambiente do robô ·` : ""} ${status}</div>
+      <div class="form-foot"><button class="btn" type="button" data-salvar="${esc(m.id)}">Salvar</button></div>
+    </div>`;
+  }).join("") : '<div class="empty"><b>Ninguém abriu a página ainda.</b><span>Compartilhe a página e peça para a pessoa abrir uma vez.</span></div>';
+}
+$("pLista").addEventListener("click", async ev => {
+  const b = ev.target.closest("[data-salvar]"); if (!b) return;
+  const box = b.closest("[data-p]"), id = box.dataset.p;
+  const val = k => box.querySelector(`[data-k="${k}"]`);
+  const pessoa = {
+    najUsuario: val("najUsuario").value, najLogin: val("najLogin").value.trim(), principal: val("principal").value,
+    nucleos: [...box.querySelectorAll("[data-nuc]")].filter(x => x.checked).map(x => x.dataset.nuc), todos: val("todos").checked,
+  };
+  try {
+    const ref = dbRef.doc("config/membros"), atual = await ref.get();
+    const pessoas = { ...((atual.exists && atual.data().pessoas) || {}), [id]: pessoa };
+    await ref.set({ pessoas });
+    toast("Pessoa salva."); b.blur(); renderPessoas();
+  } catch { toast("Não consegui salvar. Tente de novo."); }
+});
+
+// meus dados de antes (sem divisão por pessoa) passam para a minha área, uma única vez
+async function migrarDadosAntigos(db) {
+  try {
+    const antigos = await db.collection("lancamentos").get();
+    const regs = await db.collection("timesheet_registros").get();
+    const ativoAnt = await db.doc("timesheet/ativo").get();
+    if (!antigos.docs.length && !regs.docs.length && !ativoAnt.exists) return;
+    for (const d of antigos.docs) { await db.doc(`${base}/lancamentos/${d.id}`).set(d.data()); await db.doc("lancamentos/" + d.id).delete(); }
+    for (const d of regs.docs) { await db.doc(`${base}/timesheet/${d.id}`).set(d.data()); await db.doc("timesheet_registros/" + d.id).delete(); }
+    if (ativoAnt.exists) { await db.doc(`${base}/cronometro/ativo`).set(ativoAnt.data()); await db.doc("timesheet/ativo").delete(); }
+    toast("Seus lançamentos anteriores foram movidos para a sua área.");
+  } catch { /* tenta de novo na próxima abertura */ }
 }
 
 // ---------- renderização ----------
@@ -1249,7 +1534,7 @@ function toast(t) { $("toast").textContent = t; $("toast").hidden = false; clear
 // ---------- início ----------
 limpar();
 render();
-try { const v = localStorage.getItem("view"); if (["painel", "novo", "lista", "ts"].includes(v)) ir(v); } catch {}
+try { const v = localStorage.getItem("view"); if (["painel", "novo", "lista", "ts", "adm"].includes(v)) ir(v); } catch {}
 (async () => {
   sample = await window.claude?.use?.("sample");
   const perm = await window.claude?.use?.("permissions");
@@ -1263,8 +1548,31 @@ try { const v = localStorage.getItem("view"); if (["painel", "novo", "lista", "t
 })();
 (async () => {
   const db = await window.claude?.use?.("db");
-  if (!db) { $("offline").hidden = false; cadStatus("Sem conexão com o armazenamento: a lista do NAJ não pode ser carregada aqui.", "bad"); return; }
-  col = db.collection("lancamentos");
+  userCap = await window.claude?.use?.("user");
+  meuId = userCap ? await userCap.id() : null;
+  if (!db || !meuId) { $("offline").hidden = false; cadStatus("Sem conexão com o armazenamento: a lista do NAJ não pode ser carregada aqui.", "bad"); return; }
+  dbRef = db;
+  base = "equipe/" + meuId;
+  souDono = await userCap.isOwner();
+  souAdmin = souDono || await userCap.canEdit();
+  const nome = await userCap.name();
+  if (nome) { $("heroName").textContent = nome; $("heroAvatar").textContent = nome.split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join("").toUpperCase(); }
+  // registra a pessoa na equipe na primeira vez que ela abre a página
+  try {
+    const eu = await db.doc(base).get();
+    if (!eu.exists) await db.doc(base).set({ entrouEm: new Date().toISOString(), dono: souDono });
+    else if (souDono && !eu.data().dono) await db.doc(base).update({ dono: true });
+  } catch {}
+  if (souDono) await migrarDadosAntigos(db);
+  db.doc("config/membros").get().then(s => { const c = s.exists && s.data().pessoas && s.data().pessoas[meuId]; if (c && c.najUsuario) { $("fixUser").textContent = c.najUsuario; $("heroSub").textContent = `MKS – Advocacia Empresarial · NAJ: ${c.najUsuario}${c.principal ? " · núcleo " + c.principal : ""}`; } }).catch(() => {});
+  if (!souAdmin && !$("v-adm").hidden) ir("painel");
+  if (souAdmin) {
+    $("navAdm").hidden = false;
+    downloads = await window.claude?.use?.("downloads");
+    $("rCsv").hidden = !downloads;
+    vigiarAdmin(db);
+  }
+  col = db.collection(base + "/lancamentos");
   vigiarCadastros(db);
   vigiarTimesheet(db);
   col.onSnapshot(snap => { rows = snap.docs.map(d => ({ id: d.id, ...d.data() })); render(); renderRegistros(); },
