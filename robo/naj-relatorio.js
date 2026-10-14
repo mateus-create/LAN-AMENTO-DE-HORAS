@@ -113,6 +113,9 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
     await quieto(q);
     await q.fill('#TIWEDIT1', de); await q.press('#TIWEDIT1', 'Tab'); await quieto(q);
     await q.fill('#TIWEDIT2', ate || hojeBR); await q.press('#TIWEDIT2', 'Tab'); await quieto(q);
+    // da mais antiga para a mais nova: atividades lançadas durante a leitura entram no fim e não deslocam as páginas
+    await q.selectOption('#TIWCOMBOBOX3', { index: 0 }); await quieto(q); // "Data e Hora Início"
+    await q.selectOption('#TIWCOMBOBOX4', { index: 0 }); await quieto(q); // "Crescente"
     await q.locator('#TIWGRADBUTTON1').evaluate(e => e.click());
     await quieto(q);
     return q;
@@ -130,7 +133,7 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
     await quieto(q);
     // confere que abriu a atividade certa: a descrição da tela começa como a da lista
     const curto = t => t.replace(/\s+/g, ' ').trim().slice(0, 30).replace(/\(\.\.\.\)$/, '');
-    if (curto(descTela) && curto(linha[2]) && !curto(descTela).startsWith(curto(linha[2]).slice(0, 20))) throw new Error(`Atividade aberta não confere com a lista: "${curto(linha[2])}" x "${curto(descTela)}".`);
+    if (curto(descTela) && curto(linha[2]) && !curto(descTela).startsWith(curto(linha[2]).slice(0, 20))) return null;
     const area = (v.CBAREAJURIDICA || '').replace(/^\*.*\*$/, '').trim();
     return { codAtiv: v.EDCODIGOATIVIDADE || '', codProc: v.EDCODIGOPROCESSO || '', areaAtiv: area, tempo: v.EDTEMPOTOTAL || '' };
   }
@@ -144,16 +147,25 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
   await p0.context().close();
 
   const brutas = [];
-  let lidas = 0;
+  let lidas = 0, naoConferidas = 0;
   async function trabalhador(t) {
     const q = await abrirLista();
     for (let pg = 1 + t; pg <= totalPaginas; pg += nTrab) {
       if (pg > 1) { await q.fill('#TIWEDIT3', String(pg)); await q.press('#TIWEDIT3', 'Enter'); await quieto(q); }
       if (await q.inputValue('#TIWEDIT3') !== String(pg)) throw new Error(`Não consegui abrir a página ${pg} da lista de atividades.`);
-      const linhas = await lerLinhas(q);
+      let linhas = await lerLinhas(q);
       for (let i = 0; i < linhas.length; i++) {
         const k = chaveDe(linhas[i]);
-        if (!cache[k]) { cache[k] = await lerDetalhe(q, i, linhas[i]); lidas++; if (lidas % 50 === 0) { salvarCache(); console.log(`detalhes lidos: ${lidas}`); } }
+        if (!cache[k]) {
+          // se a atividade aberta não for a da linha (a lista mudou), relê a página e tenta de novo
+          let det = null;
+          for (let tent = 0; tent < 3 && !det; tent++) {
+            det = await lerDetalhe(q, i, linhas[i]);
+            if (!det) { await q.fill('#TIWEDIT3', String(pg)); await q.press('#TIWEDIT3', 'Enter'); await quieto(q); const novas = await lerLinhas(q); if (!novas[i] || chaveDe(novas[i]) !== k) break; }
+          }
+          if (det) { cache[k] = det; lidas++; if (lidas % 50 === 0) { salvarCache(); console.log(`detalhes lidos: ${lidas}`); } }
+          else { naoConferidas++; brutas.push([...linhas[i], { codAtiv: '', codProc: '', areaAtiv: '', tempo: '' }]); continue; }
+        }
         brutas.push([...linhas[i], cache[k]]);
       }
     }
@@ -162,6 +174,7 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
   await Promise.all(Array.from({ length: nTrab }, (_, t) => trabalhador(t)));
   salvarCache();
   await browser.close();
+  if (naoConferidas) console.log(`atividades sem detalhe (a lista mudou durante a leitura): ${naoConferidas}`);
 
   const areaPorCodigo = new Map(procs.map(c => [c[1], (c[5] || '').trim()]));
   const vistos = new Set();
