@@ -335,6 +335,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
       <button type="button" data-view="novo">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
         <span>Novo lançamento</span></button>
+      <button type="button" data-view="audio">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        <span>Por áudio</span></button>
       <button type="button" data-view="ts">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2h5M12 2v3"/></svg>
         <span>Timesheet</span><span class="badge live-b" id="navTs" hidden>●</span></button>
@@ -395,14 +398,14 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
       </div>
     </section>
 
-    <!-- NOVO -->
-    <section id="v-novo" class="view" hidden>
-      <div style="display:grid;gap:18px">
-        <div class="page-head"><div><div class="crumb">Atividades / Nova</div><h1 id="formTitle">Novo lançamento</h1></div></div>
+    <!-- POR ÁUDIO: o mesmo formulário do Novo lançamento é trazido para cá (ver ir()) -->
+    <section id="v-audio" class="view" hidden>
+      <div style="display:grid;gap:18px" id="audioWrap">
+        <div class="page-head"><div><div class="crumb">Atividades / Por áudio</div><h1>Lançar por áudio</h1></div></div>
         <div class="card talk" id="talkCard">
           <div class="talk-head">
             <span class="talk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span>
-            <div><h2>Lançar conversando</h2><span class="hint">Fale o que você fez e o Claude preenche o formulário abaixo para você conferir.</span></div>
+            <div><h2>Lançar conversando</h2><span class="hint">Fale o que você fez e o Claude preenche o formulário abaixo para você conferir e enviar.</span></div>
           </div>
           <div class="dictate"><b>Como falar em vez de digitar:</b> toque na caixa abaixo e use o ditado do seu aparelho.
             <span><b>Celular:</b> toque no 🎤 do teclado.</span><span><b>Windows:</b> tecla Windows + H.</span><span><b>Mac:</b> aperte Fn (ou 🌐) duas vezes.</span></div>
@@ -410,6 +413,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
           <div class="talk-foot"><span class="talk-msg" id="talkMsg" role="status"></span><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" type="button" id="talkPerm" hidden>Ativar permissão</button><button class="btn light" type="button" id="talkBtn">Preencher o formulário</button></span></div>
         </div>
 
+      </div>
+    </section>
+
+    <!-- NOVO -->
+    <section id="v-novo" class="view" hidden>
+      <div style="display:grid;gap:18px">
+        <div class="page-head"><div><div class="crumb">Atividades / Nova</div><h1 id="formTitle">Novo lançamento</h1></div></div>
         <form id="form" class="card" novalidate>
           <div class="editing" id="editing" hidden><span id="editingTxt">Editando lançamento</span><button class="ghost" type="button" id="cancelEdit">Cancelar edição</button></div>
 
@@ -540,17 +550,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
           </div>
         </div>
 
-        <div class="grid2">
-          <div class="card">
-            <div class="card-head"><h2>Esta semana</h2><b id="tsWeekTotal">00:00:00</b></div>
-            <div class="wk" id="tsWeek"></div>
-            <div class="card-head" style="margin:18px 0 10px"><h2>Por cliente</h2></div>
-            <div class="byclient" id="tsByClient"><span class="hint">Nada registrado nesta semana.</span></div>
-          </div>
-          <div class="card">
-            <div class="card-head"><h2>Registros</h2></div>
-            <div class="rows" id="tsList"><div class="empty"><b>Nenhum registro ainda.</b><span>Escolha o cliente e toque em Iniciar.</span></div></div>
-          </div>
+        <div class="card">
+          <div class="card-head"><h2>Registros</h2></div>
+          <div class="rows" id="tsList"><div class="empty"><b>Nenhum registro ainda.</b><span>Escolha o cliente e toque em Iniciar.</span></div></div>
         </div>
       </div>
     </section>
@@ -665,14 +667,18 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const durDe = r => { const d = min(r.termino) - min(r.inicio); return d > 0 ? d : 0; };
 
 // ---------- navegação ----------
+const formCasa = $("form").parentElement;
 function ir(v) {
+  // "Por áudio" usa o mesmo formulário do Novo lançamento, logo abaixo da conversa
+  if (v === "audio") $("audioWrap").appendChild($("form"));
+  else if (v === "novo") formCasa.appendChild($("form"));
   document.querySelectorAll(".view").forEach(s => s.hidden = s.id !== "v-" + v);
   document.querySelectorAll(".nav button").forEach(b => b.dataset.view === v ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
   try { localStorage.setItem("view", v); } catch {}
   window.scrollTo(0, 0);
 }
 document.addEventListener("click", ev => {
-  const v = ev.target.closest("[data-view]"); if (v) { if (v.dataset.view === "novo" && !editId) limpar(); ir(v.dataset.view); }
+  const v = ev.target.closest("[data-view]"); if (v) { if ((v.dataset.view === "novo" || v.dataset.view === "audio") && !editId) limpar(); ir(v.dataset.view); }
   const g = ev.target.closest("[data-go]"); if (g) { filtro = g.dataset.go; render(); ir("lista"); }
 });
 
@@ -1213,23 +1219,6 @@ function renderRecentes() {
   $("tRecent").onclick = ev => { const b = ev.target.closest("[data-rec]"); if (b) { const r = lista[+b.dataset.rec]; tsIniciar({ cliente: r.cliente, clienteCod: r.clienteCod, processoCod: r.processoCod, descricao: "" }); } };
 }
 function renderRegistros() {
-  const ini = inicioSemana(), dias = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
-  const semana = registros.filter(r => r.data >= ini);
-  let html = "";
-  const base = new Date(ini + "T12:00:00");
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(base); d.setDate(base.getDate() + i); const iso = isoDia(d);
-    const seg = semana.filter(r => r.data === iso).reduce((a, r) => a + (r.segundos || 0), 0);
-    html += `<div class="${iso === hoje() ? "today" : ""}"><small>${dias[i]}</small><b>${seg ? fmtHMS(seg * 1000) : "–"}</b></div>`;
-  }
-  $("tsWeek").innerHTML = html;
-  const total = semana.reduce((a, r) => a + (r.segundos || 0), 0);
-  $("tsWeekTotal").textContent = fmtHMS(total * 1000);
-  const porCli = {};
-  semana.forEach(r => porCli[r.cliente] = (porCli[r.cliente] || 0) + (r.segundos || 0));
-  const top = Object.entries(porCli).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  $("tsByClient").innerHTML = top.length ? top.map(([c, sgs]) => `<div><span>${esc(c)}</span><b>${fmtHMS(sgs * 1000)}</b><i style="--w:${Math.round(sgs / top[0][1] * 100)}%"></i></div>`).join("") : '<span class="hint">Nada registrado nesta semana.</span>';
-
   const lista = [...registros].sort((a, b) => (b.data + b.inicio).localeCompare(a.data + a.inicio)).slice(0, 40);
   if (!lista.length) { $("tsList").innerHTML = '<div class="empty"><b>Nenhum registro ainda.</b><span>Escolha o cliente e toque em Iniciar.</span></div>'; return; }
   $("tsList").innerHTML = lista.map(r => {
@@ -1580,7 +1569,7 @@ function toast(t) { $("toast").textContent = t; $("toast").hidden = false; clear
 // ---------- início ----------
 limpar();
 render();
-try { const v = localStorage.getItem("view"); if (["painel", "novo", "lista", "ts", "adm"].includes(v)) ir(v); } catch {}
+try { const v = localStorage.getItem("view"); if (["painel", "novo", "audio", "lista", "ts", "adm"].includes(v)) ir(v); } catch {}
 (async () => {
   sample = await window.claude?.use?.("sample");
   const perm = await window.claude?.use?.("permissions");
