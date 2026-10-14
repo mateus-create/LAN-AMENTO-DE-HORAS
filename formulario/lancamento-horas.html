@@ -1,214 +1,353 @@
 <title>Lançamento de Horas NAJ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap">
 <style>
-/* Layout: coluna única de app (máx. 640px), cabeçalho com resumo do dia, abas Novo / Lançamentos, cartões por lançamento com faixa de status */
+/* Layout: painel de escritório — barra lateral escura fixa (no celular vira barra inferior), área clara com cabeçalho escuro de perfil, cartões de números e lista em formato pipeline */
 :root {
-  --bg: #f3f5f4;
+  --bg: #f3f4f6;
   --surface: #ffffff;
-  --sunken: #e8ecea;
-  --ink: #15211d;
-  --muted: #5b6a64;
-  --line: #d3dbd7;
-  --accent: #0f6b55;
+  --sunken: #eef0f3;
+  --ink: #14171c;
+  --muted: #667085;
+  --line: #e3e6eb;
+  --side: #121418;
+  --side-ink: #e9ecf1;
+  --side-muted: #8a93a3;
+  --side-hover: #1d2026;
+  --hero: #16191f;
+  --hero-ink: #f5f6f8;
+  --hero-muted: #9aa3b2;
+  --accent: #14171c;
   --accent-ink: #ffffff;
-  --accent-soft: #dcefe8;
-  --ok: #1d7a46;
-  --ok-soft: #dff3e6;
-  --warn: #a35a00;
-  --warn-soft: #fbeedb;
-  --bad: #b3261e;
-  --bad-soft: #fbe3e1;
-  --wait: #3d5a99;
-  --wait-soft: #e3e9f7;
-  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
-  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --ok: #157f4a;
+  --ok-soft: #e3f4ea;
+  --warn: #9a5b00;
+  --warn-soft: #fbf0dc;
+  --bad: #b42318;
+  --bad-soft: #fde8e6;
+  --wait: #3a55a0;
+  --wait-soft: #e6ecfa;
+  --ring: #3ecf8e;
+  --sans: "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
   --r: 14px;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #0f1513; --surface: #17201d; --sunken: #1f2a26; --ink: #e6eeea; --muted: #94a59e; --line: #2c3934;
-  --accent: #4cc39f; --accent-ink: #062019; --accent-soft: #173a30;
-  --ok: #5fd08f; --ok-soft: #173525; --warn: #f0a94a; --warn-soft: #3a2a12; --bad: #ff8a80; --bad-soft: #3d1c1a; --wait: #9db4f0; --wait-soft: #1f2840;
+  --bg: #0c0e11; --surface: #15181d; --sunken: #1b1f25; --ink: #e8ebf0; --muted: #98a2b3; --line: #262b33;
+  --side: #08090b; --side-hover: #16191e; --hero: #1b1f26;
+  --accent: #e8ebf0; --accent-ink: #0c0e11;
+  --ok: #4ade80; --ok-soft: #12291c; --warn: #f3b447; --warn-soft: #2e2311; --bad: #ff8a80; --bad-soft: #351816; --wait: #9db4f0; --wait-soft: #1a2238;
   color-scheme: dark } }
 :root[data-theme="dark"] {
-  --bg: #0f1513; --surface: #17201d; --sunken: #1f2a26; --ink: #e6eeea; --muted: #94a59e; --line: #2c3934;
-  --accent: #4cc39f; --accent-ink: #062019; --accent-soft: #173a30;
-  --ok: #5fd08f; --ok-soft: #173525; --warn: #f0a94a; --warn-soft: #3a2a12; --bad: #ff8a80; --bad-soft: #3d1c1a; --wait: #9db4f0; --wait-soft: #1f2840;
+  --bg: #0c0e11; --surface: #15181d; --sunken: #1b1f25; --ink: #e8ebf0; --muted: #98a2b3; --line: #262b33;
+  --side: #08090b; --side-hover: #16191e; --hero: #1b1f26;
+  --accent: #e8ebf0; --accent-ink: #0c0e11;
+  --ok: #4ade80; --ok-soft: #12291c; --warn: #f3b447; --warn-soft: #2e2311; --bad: #ff8a80; --bad-soft: #351816; --wait: #9db4f0; --wait-soft: #1a2238;
   color-scheme: dark }
 
 * { box-sizing: border-box }
 [hidden] { display: none !important }
-body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--body); }
-.app { max-width: 640px; margin: 0 auto; padding-inline: 16px; padding-block: 18px 96px; display: grid; gap: 18px }
+html, body { height: 100% }
+body { background: var(--bg); color: var(--ink); font: 14.5px/1.5 var(--sans); }
+button { font-family: inherit }
+.shell { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: 100% }
 
-header { display: grid; gap: 14px }
-.brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap }
-h1 { font: 700 1.6rem/1.1 var(--display); margin: 0; letter-spacing: -0.01em; text-wrap: balance }
-.who { color: var(--muted); font-size: .85rem }
-.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px }
-.stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; display: grid; gap: 2px; cursor: pointer; text-align: left; font: inherit; color: inherit }
-.stat:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
-.stat b { font: 700 1.35rem/1.1 var(--display); font-variant-numeric: tabular-nums }
-.stat span { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em }
-.stat.wait b { color: var(--wait) } .stat.bad b { color: var(--bad) } .stat.ok b { color: var(--ok) }
-.robot { font-size: .82rem; color: var(--muted); display: flex; gap: 8px; align-items: center }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none }
+/* barra lateral */
+.side { background: var(--side); color: var(--side-ink); padding: 22px 14px; display: flex; flex-direction: column; gap: 26px; position: sticky; top: 0; height: 100vh }
+.logo { display: flex; align-items: center; gap: 10px; padding: 0 8px }
+.mark { width: 34px; height: 34px; border-radius: 9px; background: var(--side-ink); color: var(--side); display: grid; place-items: center; font: 800 .8rem var(--sans); letter-spacing: .02em }
+.logo b { font-weight: 700; font-size: .95rem; display: block; line-height: 1.1 }
+.logo small { color: var(--side-muted); font-size: .72rem }
+.nav { display: grid; gap: 4px }
+.nav button { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; background: transparent; color: var(--side-muted); padding: 10px 12px; border-radius: 10px; font: 500 .9rem var(--sans); cursor: pointer; text-align: left }
+.nav button:hover { background: var(--side-hover); color: var(--side-ink) }
+.nav button[aria-current="page"] { background: var(--side-hover); color: var(--side-ink); font-weight: 600 }
+.nav svg { width: 18px; height: 18px; flex: none }
+.nav .badge { margin-left: auto; background: var(--bad); color: #fff; border-radius: 999px; font-size: .7rem; font-weight: 700; padding: 1px 7px }
+.side-foot { margin-top: auto; border-top: 1px solid #23272e; padding: 14px 8px 0; font-size: .76rem; color: var(--side-muted); display: grid; gap: 4px }
+.live { display: inline-flex; align-items: center; gap: 6px; color: var(--side-ink); font-weight: 600 }
+.live i { width: 7px; height: 7px; border-radius: 50%; background: var(--ring) }
 
-.tabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--sunken); padding: 4px; border-radius: 999px }
-.tabs button { border: 0; background: transparent; color: var(--muted); font: 600 .95rem var(--body); padding: 10px; border-radius: 999px; cursor: pointer }
-.tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgb(0 0 0 / .12) }
-.tabs .count { display: inline-block; min-width: 1.4em; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--bad); color: #fff; font-size: .75rem }
+/* conteúdo */
+main { min-width: 0; padding-inline: 28px; padding-block: 26px 40px; display: grid; gap: 20px; align-content: start; max-width: 1180px; width: 100% }
+.page-head { display: flex; align-items: end; justify-content: space-between; gap: 12px; flex-wrap: wrap }
+.crumb { color: var(--muted); font-size: .78rem; font-weight: 500 }
+h1 { margin: 2px 0 0; font: 800 1.55rem/1.15 var(--sans); letter-spacing: -.02em; text-wrap: balance }
+h2 { margin: 0; font: 700 1rem var(--sans) }
+.view > div > *, .card-head > * { min-width: 0 }
+.card { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px }
+.link { border: 0; background: none; color: var(--muted); font: 600 .8rem var(--sans); cursor: pointer; padding: 4px }
+.link:hover { color: var(--ink) }
 
-form { display: grid; gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 18px }
-.editing { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 8px 12px; font-size: .88rem; font-weight: 600 }
-.field { display: grid; gap: 6px; min-width: 0 }
-.field > label, .legend { font-weight: 600; font-size: .88rem }
-.hint { color: var(--muted); font-size: .8rem; font-weight: 400 }
-.opt { color: var(--muted); font-weight: 400 }
-input, select, textarea { width: 100%; font: 16px var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; min-width: 0 }
-textarea { min-height: 96px; resize: vertical }
-input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent }
-.mono { font-family: var(--mono) }
-.row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
-.seg { display: grid; gap: 6px }
-.seg label { display: flex; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; font-size: .92rem }
-.seg input { width: auto; accent-color: var(--accent) }
-.seg label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft) }
-.seg small { margin-left: auto; color: var(--muted); font-family: var(--mono) }
-.clock { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: end }
-.duration { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; background: var(--sunken); border-radius: 12px; padding: 10px 14px }
-.duration b { font: 500 1.6rem var(--mono); font-variant-numeric: tabular-nums }
-.duration.badtime b { color: var(--bad) }
-.mini { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 4px 10px; font: 500 .78rem var(--body); cursor: pointer }
-.switch { display: flex; align-items: center; justify-content: space-between; gap: 12px }
-.switch input { width: 46px; height: 26px; appearance: none; background: var(--line); border-radius: 999px; position: relative; cursor: pointer; border: 0; padding: 0; flex: none }
-.switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: left .15s }
-.switch input:checked { background: var(--accent) } .switch input:checked::after { left: 23px }
-.fixed { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: .8rem; border-top: 1px dashed var(--line); padding-top: 12px }
-.err { color: var(--bad); font-size: .82rem }
-.primary { border: 0; background: var(--accent); color: var(--accent-ink); font: 600 1rem var(--body); padding: 14px; border-radius: 12px; cursor: pointer }
-.primary:disabled { opacity: .5; cursor: progress }
-.ghost { border: 1px solid var(--line); background: transparent; color: var(--ink); font: 500 .85rem var(--body); padding: 8px 12px; border-radius: 10px; cursor: pointer }
-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.btn { border: 0; background: var(--accent); color: var(--accent-ink); font: 600 .9rem var(--sans); padding: 11px 18px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; justify-content: center }
+.btn:disabled { opacity: .5; cursor: progress }
+.btn.light { background: var(--hero-ink); color: var(--hero) }
+.ghost { border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 600 .8rem var(--sans); padding: 7px 12px; border-radius: 9px; cursor: pointer }
+.ghost.danger { color: var(--bad); border-color: var(--bad) }
+button:focus-visible, .seg-tabs button:focus-visible { outline: 2px solid var(--wait); outline-offset: 2px }
 
-.filters { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px }
-.filters button { flex: none; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 12px; font: 500 .85rem var(--body); cursor: pointer }
-.filters button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink) }
-.list { display: grid; gap: 10px }
-.day { font: 600 .78rem var(--body); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 6px; display: flex; justify-content: space-between }
-.card { background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--wait); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 8px; min-width: 0 }
-.card.lancado { border-left-color: var(--ok) } .card.erro { border-left-color: var(--bad) } .card.processando { border-left-color: var(--warn) }
-.top { display: flex; justify-content: space-between; gap: 10px; align-items: start }
-.client { font-weight: 600; overflow-wrap: anywhere }
-.time { font: 500 .9rem var(--mono); white-space: nowrap; font-variant-numeric: tabular-nums }
-.meta { color: var(--muted); font-size: .82rem; overflow-wrap: anywhere }
-.desc { font-size: .92rem; overflow-wrap: anywhere }
-.pill { display: inline-flex; align-items: center; gap: 6px; font: 600 .72rem var(--body); text-transform: uppercase; letter-spacing: .05em; padding: 3px 9px; border-radius: 999px; width: fit-content }
+/* cabeçalho de perfil */
+.hero { background: var(--hero); color: var(--hero-ink); border-radius: 18px; padding: 22px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap }
+.avatar { width: 54px; height: 54px; border-radius: 50%; background: linear-gradient(140deg, #3a3f49, #22262d); border: 2px solid #3a3f49; display: grid; place-items: center; font: 700 1.05rem var(--sans); color: #fff; flex: none }
+.hero-txt { min-width: 0; flex: 1 }
+.hero-txt small { color: var(--hero-muted); font-size: .78rem; display: block }
+.hero-txt b { font-size: 1.3rem; font-weight: 800; letter-spacing: -.01em }
+
+/* números */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; text-align: left; cursor: pointer; color: inherit; display: grid; gap: 6px; font: inherit }
+.kpi:hover { border-color: var(--muted) }
+.kpi span { color: var(--muted); font-size: .78rem; font-weight: 600 }
+.kpi b { font: 600 1.7rem/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em }
+.kpi.bad b { color: var(--bad) } .kpi.ok b { color: var(--ok) } .kpi.wait b { color: var(--wait) }
+
+.grid2 { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 14px; align-items: start }
+.progress { background: var(--hero); color: var(--hero-ink); border-radius: var(--r); padding: 20px; display: grid; gap: 16px }
+.progress small { color: var(--hero-muted) }
+.ring-wrap { display: flex; align-items: center; gap: 18px }
+.ring { width: 112px; height: 112px; flex: none; position: relative }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg) }
+.ring b { position: absolute; inset: 0; display: grid; place-items: center; font: 600 1.35rem var(--mono) }
+.legend { display: grid; gap: 8px; font-size: .84rem }
+.legend div { display: flex; align-items: center; gap: 8px }
+.legend i { width: 9px; height: 9px; border-radius: 3px; flex: none }
+.legend em { font-style: normal; font-family: var(--mono); margin-left: auto; padding-left: 10px }
+
+/* lista pipeline */
+.seg-tabs { display: inline-flex; gap: 2px; background: var(--sunken); padding: 4px; border-radius: 11px; overflow-x: auto; max-width: 100% }
+.seg-tabs button { flex: none; border: 0; background: transparent; color: var(--muted); padding: 7px 12px; border-radius: 8px; font: 600 .82rem var(--sans); cursor: pointer; white-space: nowrap }
+.seg-tabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .1) }
+.seg-tabs .n { font-family: var(--mono); font-size: .75rem; opacity: .7; margin-left: 4px }
+.rows { display: grid }
+.row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 118px 64px auto; gap: 14px; align-items: center; padding: 13px 4px; border-top: 1px solid var(--line) }
+.row:first-child { border-top: 0 }
+.row .when { white-space: nowrap; font: 500 .8rem var(--mono); color: var(--muted); font-variant-numeric: tabular-nums }
+.row .who { min-width: 0 }
+.row .client { font-weight: 700; overflow-wrap: anywhere }
+.row .meta { color: var(--muted); font-size: .8rem; overflow-wrap: anywhere }
+.row .desc { font-size: .86rem; margin-top: 2px; overflow-wrap: anywhere }
+.row .dur { font: 600 .92rem var(--mono); text-align: right }
+.row .acts { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap }
+.pill { display: inline-flex; align-items: center; gap: 6px; font: 700 .7rem var(--sans); padding: 4px 9px; border-radius: 999px; width: fit-content; white-space: nowrap }
+.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor }
 .pill.pendente { background: var(--wait-soft); color: var(--wait) } .pill.lancado { background: var(--ok-soft); color: var(--ok) }
 .pill.erro { background: var(--bad-soft); color: var(--bad) } .pill.processando { background: var(--warn-soft); color: var(--warn) }
-.problem { background: var(--bad-soft); border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; font-size: .88rem }
+.problem { grid-column: 2 / -1; background: var(--bad-soft); border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; font-size: .84rem }
+.okinfo { grid-column: 2 / -1; color: var(--muted); font-size: .8rem }
 .chips { display: flex; flex-wrap: wrap; gap: 6px }
-.chips button { border: 1px solid var(--bad); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 5px 10px; font: 500 .8rem var(--body); cursor: pointer; text-align: left }
-.actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end }
-.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: .85rem }
-.danger { border-color: var(--bad); color: var(--bad) }
-.empty { text-align: center; color: var(--muted); padding: 28px 12px; border: 1px dashed var(--line); border-radius: var(--r); display: grid; gap: 4px }
-.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: .9rem; z-index: 20; max-width: calc(100% - 32px) }
-.offline { background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 12px; font-size: .88rem }
-@media (max-width: 380px) { .row, .clock { grid-template-columns: 1fr } .stat b { font-size: 1.1rem } }
+.chips button { border: 1px solid var(--bad); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 5px 11px; font: 500 .8rem var(--sans); cursor: pointer; text-align: left }
+.confirm { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: .8rem }
+.day { display: flex; justify-content: space-between; padding: 14px 4px 6px; font: 700 .72rem var(--sans); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); border-top: 1px solid var(--line) }
+.day:first-child { border-top: 0; padding-top: 0 }
+.empty { text-align: center; color: var(--muted); padding: 30px 12px; display: grid; gap: 4px }
+.empty b { color: var(--ink) }
+
+/* formulário */
+form { display: grid; gap: 18px }
+.fgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px }
+.full { grid-column: 1 / -1 }
+.field { display: grid; gap: 6px; min-width: 0; align-content: start }
+.field > label, .lbl { font-weight: 700; font-size: .82rem }
+.hint { color: var(--muted); font-size: .76rem; font-weight: 400 }
+.opt { color: var(--muted); font-weight: 500 }
+input, select, textarea { width: 100%; font: 16px var(--sans); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; min-width: 0 }
+textarea { min-height: 100px; resize: vertical }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outline-offset: 0; border-color: transparent }
+.mono { font-family: var(--mono) }
+.types { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px }
+.types label { border: 1px solid var(--line); border-radius: 11px; padding: 11px 12px; cursor: pointer; display: grid; gap: 2px; font-size: .84rem; font-weight: 600 }
+.types small { color: var(--muted); font: 500 .72rem var(--mono) }
+.types input { position: absolute; opacity: 0; pointer-events: none; width: 1px }
+.types label:has(input:checked) { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); background: var(--sunken) }
+.types label:has(input:focus-visible) { outline: 2px solid var(--wait); outline-offset: 2px }
+.clock { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end }
+.dur-box { background: var(--hero); color: var(--hero-ink); border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 46px }
+.dur-box b { font: 600 1.25rem var(--mono) }
+.dur-box.badtime b { color: var(--bad) }
+.dur-box button { border: 1px solid #3a3f49; background: transparent; color: var(--hero-ink); border-radius: 999px; padding: 4px 10px; font: 600 .72rem var(--sans); cursor: pointer; white-space: nowrap }
+.switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid var(--line); border-radius: 11px; padding: 12px 14px }
+.switch input { width: 44px; height: 25px; appearance: none; background: var(--line); border-radius: 999px; position: relative; cursor: pointer; border: 0; padding: 0; flex: none }
+.switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 19px; height: 19px; border-radius: 50%; background: #fff; transition: left .15s }
+.switch input:checked { background: var(--ok) } .switch input:checked::after { left: 22px }
+.fixed { display: flex; flex-wrap: wrap; gap: 8px }
+.fixed span { background: var(--sunken); border-radius: 8px; padding: 5px 10px; font-size: .76rem; color: var(--muted) }
+.fixed b { color: var(--ink); font-weight: 600 }
+.editing { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 9px 12px; font-size: .85rem; font-weight: 700; flex-wrap: wrap }
+.err { color: var(--bad); font-size: .82rem; font-weight: 600 }
+.form-foot { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 16px }
+
+.offline { background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 12px; font-size: .85rem; font-weight: 600 }
+.toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: 12px; font-size: .88rem; font-weight: 600; z-index: 30; max-width: calc(100% - 32px); box-shadow: 0 8px 24px rgb(0 0 0 / .2) }
+
+/* celular */
+@media (max-width: 860px) {
+  .shell { grid-template-columns: 1fr }
+  .side { position: fixed; z-index: 20; top: auto; bottom: 0; left: 0; right: 0; height: auto; padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)); flex-direction: row; gap: 0 }
+  .side .logo, .side-foot { display: none }
+  .nav { grid-template-columns: repeat(3, 1fr); width: 100%; gap: 2px }
+  .nav button { flex-direction: column; gap: 3px; font-size: .7rem; padding: 7px 4px; justify-content: center; align-items: center; position: relative; text-align: center }
+  .nav .badge { position: absolute; top: 2px; right: calc(50% - 22px); margin: 0; font-size: .62rem; padding: 0 5px }
+  main { padding-inline: 16px; padding-block: 16px 100px; gap: 16px }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px }
+  .kpi b { font-size: 1.4rem }
+  .grid2, .fgrid { grid-template-columns: 1fr }
+  .types { grid-template-columns: 1fr }
+  .clock { grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  .clock .dur-box { grid-column: 1 / -1 }
+  .row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; padding: 14px 2px }
+  .row .when { grid-column: 1; grid-row: 1 }
+  .row .pillcell { grid-column: 2; grid-row: 1; justify-self: end }
+  .row .who { grid-column: 1 / -1 }
+  .row .dur { grid-column: 1; text-align: left; font-size: .85rem }
+  .row .acts { grid-column: 2 }
+  .problem, .okinfo { grid-column: 1 / -1 }
+  .hero { padding: 18px }
+  .hero .btn { width: 100% }
+}
 @media (prefers-reduced-motion: reduce) { * { transition: none !important } }
 </style>
 
-<div class="app">
-  <header>
-    <div class="brand">
-      <h1>Lançamento de Horas</h1>
-      <span class="who">NAJ · MKS Advocacia · Mateus Galiza</span>
+<div class="shell">
+  <aside class="side">
+    <div class="logo"><span class="mark">MKS</span><span><b>Horas NAJ</b><small>Lançamento de atividades</small></span></div>
+    <nav class="nav" aria-label="Seções">
+      <button type="button" data-view="painel" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span>Painel</span></button>
+      <button type="button" data-view="novo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+        <span>Novo lançamento</span></button>
+      <button type="button" data-view="lista">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg>
+        <span>Lançamentos</span><span class="badge" id="navBadge" hidden></span></button>
+    </nav>
+    <div class="side-foot">
+      <span class="live"><i></i>Robô ativo</span>
+      <span>Confere a fila de hora em hora e lança no NAJ.</span>
     </div>
-    <div class="stats">
-      <button class="stat wait" type="button" data-go="pendente"><b id="sPend">–</b><span>Na fila</span></button>
-      <button class="stat bad" type="button" data-go="erro"><b id="sErr">–</b><span>Precisam de você</span></button>
-      <button class="stat ok" type="button" data-go="lancado"><b id="sHoras">–</b><span>Lançadas hoje</span></button>
-    </div>
-    <div class="robot"><span class="dot"></span><span>O robô confere a fila de hora em hora e lança no NAJ o que estiver pendente.</span></div>
-    <div class="offline" id="offline" hidden>Sem conexão com o armazenamento do formulário. Abra esta página pelo claude.ai com sua conta para salvar lançamentos.</div>
-  </header>
+  </aside>
 
-  <div class="tabs" role="tablist">
-    <button role="tab" id="tabNovo" aria-selected="true" type="button">Novo lançamento</button>
-    <button role="tab" id="tabLista" aria-selected="false" type="button">Lançamentos<span class="count" id="tabCount" hidden></span></button>
-  </div>
+  <main>
+    <div class="offline" id="offline" hidden>Sem conexão com o armazenamento. Abra esta página pelo claude.ai com sua conta para salvar lançamentos.</div>
 
-  <section id="paneNovo">
-    <form id="form" novalidate>
-      <div class="editing" id="editing" hidden><span id="editingTxt">Editando lançamento</span><button class="ghost" type="button" id="cancelEdit">Cancelar edição</button></div>
-
-      <div class="field">
-        <label for="cliente">Cliente</label>
-        <input id="cliente" autocomplete="off" list="clientesUsados" placeholder="Ex.: ESQUADRIAS DE ALUMINIO SCHNEIDER LTDA">
-        <datalist id="clientesUsados"></datalist>
-        <span class="hint">Escreva como está cadastrado no NAJ. Se houver mais de um parecido, o robô avisa e mostra as opções.</span>
-      </div>
-
-      <div class="field">
-        <label for="processo">Número do processo <span class="opt">(opcional)</span></label>
-        <input id="processo" class="mono" inputmode="numeric" autocomplete="off" placeholder="0000000-00.0000.0.00.0000">
-        <span class="hint">Com o número, o NAJ vincula o processo e confere se é do cliente informado.</span>
-      </div>
-
-      <div class="row">
-        <div class="field">
-          <label for="area">Área jurídica</label>
-          <select id="area"></select>
+    <!-- PAINEL -->
+    <section id="v-painel" class="view">
+      <div style="display:grid;gap:18px">
+        <div class="hero">
+          <div class="avatar">MG</div>
+          <div class="hero-txt"><small>MKS – Advocacia Empresarial · NAJ</small><b>Mateus Galiza</b></div>
+          <button class="btn light" type="button" data-view="novo">+ Novo lançamento</button>
         </div>
-        <div class="field">
-          <label for="data">Data da atividade</label>
-          <input id="data" type="date">
+
+        <div class="kpis">
+          <button class="kpi wait" type="button" data-go="pendente"><span>Na fila</span><b id="kFila">–</b></button>
+          <button class="kpi bad" type="button" data-go="erro"><span>Precisam de você</span><b id="kErr">–</b></button>
+          <button class="kpi ok" type="button" data-go="lancado"><span>Lançadas hoje</span><b id="kHoje">–</b></button>
+          <button class="kpi" type="button" data-go="lancado"><span>Lançadas na semana</span><b id="kSemana">–</b></button>
+        </div>
+
+        <div class="grid2">
+          <div class="progress">
+            <div><h2>Horas de hoje no NAJ</h2><small id="progSub">Do que você registrou hoje, quanto já está lançado.</small></div>
+            <div class="ring-wrap">
+              <div class="ring">
+                <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="#2c313a" stroke-width="12"/><circle id="ringArc" cx="60" cy="60" r="50" fill="none" stroke="var(--ring)" stroke-width="12" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/></svg>
+                <b id="ringPct">0%</b>
+              </div>
+              <div class="legend">
+                <div><i style="background:var(--ring)"></i>Lançado<em id="lgOk">00:00</em></div>
+                <div><i style="background:#9db4f0"></i>Na fila<em id="lgFila">00:00</em></div>
+                <div><i style="background:#ff8a80"></i>Com problema<em id="lgErr">00:00</em></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><h2>Últimos lançamentos</h2><button class="link" type="button" data-view="lista">Ver todos →</button></div>
+            <div class="rows" id="recent"><div class="empty"><b>Carregando…</b></div></div>
+          </div>
         </div>
       </div>
+    </section>
 
-      <div class="field">
-        <span class="legend">Tipo de atividade</span>
-        <div class="seg" id="tipos"></div>
+    <!-- NOVO -->
+    <section id="v-novo" class="view" hidden>
+      <div style="display:grid;gap:18px">
+        <div class="page-head"><div><div class="crumb">Atividades / Nova</div><h1 id="formTitle">Novo lançamento</h1></div></div>
+        <form id="form" class="card" novalidate>
+          <div class="editing" id="editing" hidden><span id="editingTxt">Editando lançamento</span><button class="ghost" type="button" id="cancelEdit">Cancelar edição</button></div>
+
+          <div class="fgrid">
+            <div class="field">
+              <label for="cliente">Cliente</label>
+              <input id="cliente" autocomplete="off" list="clientesUsados" placeholder="Ex.: ESQUADRIAS DE ALUMINIO SCHNEIDER LTDA">
+              <datalist id="clientesUsados"></datalist>
+              <span class="hint">Como está cadastrado no NAJ. Se houver nomes parecidos, o robô mostra as opções.</span>
+            </div>
+            <div class="field">
+              <label for="processo">Número do processo <span class="opt">(opcional)</span></label>
+              <input id="processo" class="mono" inputmode="numeric" autocomplete="off" placeholder="0000000-00.0000.0.00.0000">
+              <span class="hint">Com o número, o NAJ vincula o processo e confere se é do cliente.</span>
+            </div>
+
+            <div class="field">
+              <label for="area">Área jurídica</label>
+              <select id="area"></select>
+            </div>
+            <div class="field">
+              <label for="data">Data da atividade</label>
+              <input id="data" type="date">
+            </div>
+
+            <div class="field full">
+              <span class="lbl">Tipo de atividade</span>
+              <div class="types" id="tipos"></div>
+            </div>
+
+            <div class="field full">
+              <label for="descricao">Descrição da atividade</label>
+              <textarea id="descricao" placeholder="O que foi feito"></textarea>
+            </div>
+
+            <div class="clock full">
+              <div class="field"><label for="inicio">Comecei às</label><input id="inicio" type="time" class="mono"></div>
+              <div class="field"><label for="termino">Terminei às</label><input id="termino" type="time" class="mono"></div>
+              <div class="dur-box" id="duration"><span class="hint" style="color:var(--hero-muted)">Tempo</span><b id="dur">00:00</b><button type="button" id="agora">Terminei agora</button></div>
+            </div>
+
+            <div class="switch full">
+              <label for="disp"><b style="font-size:.85rem">Disponível ao cliente</b><span class="hint" style="display:block">O cliente vê esta atividade no portal dele.</span></label>
+              <input id="disp" type="checkbox" checked>
+            </div>
+
+            <div class="fixed full"><span>Usuário <b>MATEUS GALIZA</b></span><span>Divisão <b>MATRIZ</b></span><span>Setor <b>não usado no NAJ</b></span></div>
+          </div>
+
+          <div class="err" id="formErr" role="alert" hidden></div>
+          <div class="form-foot">
+            <button class="ghost" type="button" id="limparBtn">Limpar</button>
+            <button class="btn" type="submit" id="salvar">Enviar para a fila</button>
+          </div>
+        </form>
       </div>
+    </section>
 
-      <div class="field">
-        <label for="descricao">Descrição da atividade</label>
-        <textarea id="descricao" placeholder="O que foi feito"></textarea>
-      </div>
-
-      <div class="clock">
-        <div class="field">
-          <label for="inicio">Comecei às</label>
-          <input id="inicio" type="time" class="mono">
+    <!-- LISTA -->
+    <section id="v-lista" class="view" hidden>
+      <div style="display:grid;gap:18px">
+        <div class="page-head">
+          <div><div class="crumb">Atividades</div><h1>Lançamentos</h1></div>
+          <button class="btn" type="button" data-view="novo">+ Novo lançamento</button>
         </div>
-        <div class="field">
-          <label for="termino">Terminei às</label>
-          <input id="termino" type="time" class="mono">
+        <div class="card">
+          <div class="card-head"><div class="seg-tabs" id="filters"></div></div>
+          <div class="rows" id="list"><div class="empty"><b>Carregando lançamentos…</b></div></div>
         </div>
-        <div class="duration" id="duration"><span class="hint">Tempo no NAJ</span><b id="dur">00:00</b><button class="mini" type="button" id="agora">Terminei agora</button></div>
       </div>
-
-      <div class="switch">
-        <label for="disp">Disponível ao cliente <span class="hint" style="display:block">O cliente vê esta atividade no portal dele.</span></label>
-        <input id="disp" type="checkbox" checked>
-      </div>
-
-      <div class="fixed"><span>Usuário: MATEUS GALIZA</span><span>Divisão: MATRIZ</span><span>Setor: o NAJ não tem setores cadastrados</span></div>
-
-      <div class="err" id="formErr" role="alert" hidden></div>
-      <button class="primary" type="submit" id="salvar">Enviar para a fila</button>
-    </form>
-  </section>
-
-  <section id="paneLista" hidden>
-    <div class="filters" id="filters"></div>
-    <div class="list" id="list">
-      <div class="empty"><b>Carregando lançamentos…</b><span>Os lançamentos enviados aparecem aqui com o status do NAJ.</span></div>
-    </div>
-  </section>
+    </section>
+  </main>
 </div>
 <div class="toast" id="toast" hidden></div>
 
@@ -218,17 +357,34 @@ const TIPOS = [["CONTRATOS FIXOS","100"],["PROPOSTA FECHADA","200"],["HORAS ADMI
 const STATUS = { pendente: "Na fila", processando: "Lançando agora", erro: "Precisa de você", lancado: "Lançado no NAJ" };
 const $ = id => document.getElementById(id);
 
-let db = null, col = null, rows = [], filtro = "todos", editId = null, confirmDel = null;
+let col = null, rows = [], filtro = "todos", editId = null, confirmDel = null;
 
-// ---------- formulário ----------
-$("area").innerHTML = '<option value="">Selecione…</option>' + AREAS.map(a => `<option>${a}</option>`).join("");
-$("tipos").innerHTML = TIPOS.map(([t, c], i) => `<label><input type="radio" name="tipo" value="${t}" id="tipo${c}"> ${t} <small>${c}</small></label>`).join("");
-
+// ---------- utilidades ----------
 const hoje = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const inicioSemana = () => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
 const agora = () => new Date().toTimeString().slice(0, 5);
 const min = t => { const [h, m] = (t || "").split(":").map(Number); return h * 60 + m; };
 const fmtDur = m => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 const dataBR = iso => iso ? iso.split("-").reverse().join("/") : "";
+const dataCurta = iso => iso ? iso.split("-").reverse().slice(0, 2).join("/") : "";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const durDe = r => { const d = min(r.termino) - min(r.inicio); return d > 0 ? d : 0; };
+
+// ---------- navegação ----------
+function ir(v) {
+  document.querySelectorAll(".view").forEach(s => s.hidden = s.id !== "v-" + v);
+  document.querySelectorAll(".nav button").forEach(b => b.dataset.view === v ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
+  try { localStorage.setItem("view", v); } catch {}
+  window.scrollTo(0, 0);
+}
+document.addEventListener("click", ev => {
+  const v = ev.target.closest("[data-view]"); if (v) { if (v.dataset.view === "novo" && !editId) limpar(); ir(v.dataset.view); }
+  const g = ev.target.closest("[data-go]"); if (g) { filtro = g.dataset.go; render(); ir("lista"); }
+});
+
+// ---------- formulário ----------
+$("area").innerHTML = '<option value="">Selecione…</option>' + AREAS.map(a => `<option>${a}</option>`).join("");
+$("tipos").innerHTML = TIPOS.map(([t, c]) => `<label><input type="radio" name="tipo" value="${t}" id="tipo${c}">${t}<small>Código ${c}</small></label>`).join("");
 
 function limpar() {
   editId = null;
@@ -236,6 +392,7 @@ function limpar() {
   $("data").value = hoje();
   $("disp").checked = true;
   $("editing").hidden = true;
+  $("formTitle").textContent = "Novo lançamento";
   $("salvar").textContent = "Enviar para a fila";
   $("formErr").hidden = true;
   atualizarDur();
@@ -248,7 +405,8 @@ function atualizarDur() {
 }
 ["inicio", "termino"].forEach(id => $(id).addEventListener("input", atualizarDur));
 $("agora").onclick = () => { $("termino").value = agora(); atualizarDur(); };
-$("cancelEdit").onclick = limpar;
+$("cancelEdit").onclick = () => { limpar(); ir("lista"); };
+$("limparBtn").onclick = limpar;
 
 function lerForm() {
   return {
@@ -291,16 +449,17 @@ $("form").addEventListener("submit", async ev => {
     if (editId) {
       await col.doc(editId).update(corpo);
       toast("Lançamento corrigido e devolvido à fila.");
+      limpar(); ir("lista");
     } else {
       await col.add({ ...corpo, criadoEm: agoraISO });
-      toast("Enviado para a fila. O robô lança na próxima hora cheia.");
+      toast("Enviado para a fila. O robô lança na próxima verificação.");
+      const manter = { area: v.area, tipo: v.tipo, data: v.data, termino: v.termino };
+      limpar();
+      // o próximo lançamento costuma repetir área, tipo e data, e começar onde o anterior terminou
+      $("area").value = manter.area; $("data").value = manter.data; $("inicio").value = manter.termino;
+      const r = document.querySelector(`input[name="tipo"][value="${manter.tipo}"]`); if (r) r.checked = true;
+      atualizarDur();
     }
-    const manter = { area: v.area, tipo: v.tipo, data: v.data, termino: v.termino };
-    limpar();
-    // facilita o próximo lançamento: área, tipo e data se repetem; o início vira o término anterior
-    $("area").value = manter.area; $("data").value = manter.data; $("inicio").value = manter.termino;
-    const r = document.querySelector(`input[name="tipo"][value="${manter.tipo}"]`); if (r) r.checked = true;
-    atualizarDur();
   } catch (e) {
     toast(e && e.code === "quota_exceeded" ? "O armazenamento está cheio. Apague lançamentos antigos." : "Não consegui salvar. Tente de novo.");
   } finally { $("salvar").disabled = false; }
@@ -315,64 +474,77 @@ function editar(r) {
   document.querySelectorAll('input[name="tipo"]').forEach(x => x.checked = x.value === r.tipo);
   $("editing").hidden = false;
   $("editingTxt").textContent = r.status === "erro" ? "Corrigindo lançamento com problema" : "Editando lançamento na fila";
+  $("formTitle").textContent = r.status === "erro" ? "Corrigir lançamento" : "Editar lançamento";
   $("salvar").textContent = "Salvar e devolver à fila";
-  atualizarDur(); abrirAba("novo"); $("cliente").focus();
+  $("formErr").hidden = true;
+  atualizarDur(); ir("novo"); $("cliente").focus();
 }
 
-// ---------- lista ----------
-function abrirAba(qual) {
-  $("tabNovo").setAttribute("aria-selected", qual === "novo");
-  $("tabLista").setAttribute("aria-selected", qual === "lista");
-  $("paneNovo").hidden = qual !== "novo"; $("paneLista").hidden = qual !== "lista";
-  try { localStorage.setItem("aba", qual); } catch {}
+// ---------- renderização ----------
+function linha(r, compacto) {
+  const st = r.status || "pendente";
+  let h = `<div class="row">
+    <div class="when">${dataCurta(r.data)} · ${esc(r.inicio)}–${esc(r.termino)}</div>
+    <div class="who"><div class="client">${esc(r.clienteNaj || r.cliente)}</div>
+      <div class="meta">${r.processo ? `<span class="mono">${esc(r.processo)}</span> · ` : "Sem processo · "}${esc(r.area)} · ${esc(r.tipo)}${r.disponivelCliente === false ? " · oculto ao cliente" : ""}</div>
+      ${compacto ? "" : `<div class="desc">${esc(r.descricao)}</div>`}</div>
+    <div class="pillcell"><span class="pill ${st}">${STATUS[st] || st}</span></div>
+    <div class="dur">${fmtDur(durDe(r))}</div>`;
+  if (compacto) return h + `<div class="acts"></div></div>`;
+  h += `<div class="acts">${st === "pendente" || st === "erro" ? (confirmDel === r.id
+      ? `<span class="confirm">Apagar? <button class="ghost danger" type="button" data-delok="${r.id}">Apagar</button><button class="ghost" type="button" data-delno="1">Manter</button></span>`
+      : `<button class="ghost" type="button" data-del="${r.id}">Apagar</button><button class="ghost" type="button" data-edit="${r.id}">${st === "erro" ? "Corrigir" : "Editar"}</button>`) : ""}</div>`;
+  if (st === "erro") h += `<div class="problem"><b>${esc(r.mensagem || "O robô não conseguiu lançar.")}</b>${(r.candidatos || []).length ? `<span>Toque no cliente correto para devolver à fila:</span><div class="chips">${r.candidatos.map((c, i) => `<button type="button" data-pick="${r.id}" data-i="${i}">${esc(c)}</button>`).join("")}</div>` : ""}</div>`;
+  if (st === "lancado") h += `<div class="okinfo">${esc(r.mensagem || "Lançado no NAJ.")}${r.processoNaj ? ` · ${esc(r.processoNaj)}` : ""}</div>`;
+  return h + `</div>`;
 }
-$("tabNovo").onclick = () => abrirAba("novo");
-$("tabLista").onclick = () => abrirAba("lista");
-document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => { filtro = b.dataset.go; abrirAba("lista"); render(); });
-
-function durDe(r) { const d = min(r.termino) - min(r.inicio); return d > 0 ? d : 0; }
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 function render() {
   const n = s => rows.filter(r => r.status === s).length;
-  const pend = n("pendente") + n("processando"), errs = n("erro");
-  const horasHoje = rows.filter(r => r.status === "lancado" && r.data === hoje()).reduce((a, r) => a + durDe(r), 0);
-  $("sPend").textContent = pend; $("sErr").textContent = errs; $("sHoras").textContent = fmtDur(horasHoje);
-  $("tabCount").hidden = !errs; $("tabCount").textContent = errs;
+  const fila = n("pendente") + n("processando"), errs = n("erro");
+  const soma = f => rows.filter(f).reduce((a, r) => a + durDe(r), 0);
+  const h = hoje(), sem = inicioSemana();
+  const okHoje = soma(r => r.status === "lancado" && r.data === h);
+  const filaHoje = soma(r => (r.status === "pendente" || r.status === "processando") && r.data === h);
+  const errHoje = soma(r => r.status === "erro" && r.data === h);
+
+  $("kFila").textContent = fila; $("kErr").textContent = errs;
+  $("kHoje").textContent = fmtDur(okHoje);
+  $("kSemana").textContent = fmtDur(soma(r => r.status === "lancado" && r.data >= sem));
+  $("navBadge").hidden = !errs; $("navBadge").textContent = errs;
+
+  const tot = okHoje + filaHoje + errHoje, pct = tot ? Math.round(okHoje / tot * 100) : 0;
+  $("ringPct").textContent = pct + "%";
+  $("ringArc").setAttribute("stroke-dashoffset", (314.16 * (1 - pct / 100)).toFixed(2));
+  $("lgOk").textContent = fmtDur(okHoje); $("lgFila").textContent = fmtDur(filaHoje); $("lgErr").textContent = fmtDur(errHoje);
+  $("progSub").textContent = tot ? `Você registrou ${fmtDur(tot)} hoje.` : "Nenhuma hora registrada hoje ainda.";
+
   $("clientesUsados").innerHTML = [...new Set(rows.map(r => r.clienteNaj || r.cliente).filter(Boolean))].sort().map(c => `<option value="${esc(c)}">`).join("");
 
-  const filtros = [["todos", "Todos", rows.length], ["pendente", "Na fila", pend], ["erro", "Precisam de você", errs], ["lancado", "Lançados", n("lancado")]];
-  $("filters").innerHTML = filtros.map(([k, t, c]) => `<button type="button" aria-pressed="${filtro === k}" data-f="${k}">${t} · ${c}</button>`).join("");
+  const recentes = [...rows].sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || "")).slice(0, 5);
+  $("recent").innerHTML = recentes.length ? recentes.map(r => linha(r, true)).join("")
+    : `<div class="empty"><b>Nenhum lançamento ainda.</b><span>Use “Novo lançamento”. Ele entra na fila e o robô lança no NAJ.</span></div>`;
+
+  const filtros = [["todos", "Todos", rows.length], ["pendente", "Na fila", fila], ["erro", "Precisam de você", errs], ["lancado", "Lançados", n("lancado")]];
+  $("filters").innerHTML = filtros.map(([k, t, c]) => `<button type="button" aria-pressed="${filtro === k}" data-f="${k}">${t}<span class="n">${c}</span></button>`).join("");
   $("filters").querySelectorAll("button").forEach(b => b.onclick = () => { filtro = b.dataset.f; render(); });
 
-  let lista = rows.filter(r => filtro === "todos" || r.status === filtro || (filtro === "pendente" && r.status === "processando"));
   const ordem = { erro: 0, processando: 1, pendente: 2, lancado: 3 };
-  lista.sort((a, b) => (filtro === "todos" ? ordem[a.status] - ordem[b.status] : 0) || (b.data + b.inicio).localeCompare(a.data + a.inicio));
+  const lista = rows.filter(r => filtro === "todos" || r.status === filtro || (filtro === "pendente" && r.status === "processando"))
+    .sort((a, b) => (filtro === "todos" ? ordem[a.status] - ordem[b.status] : 0) || (b.data + b.inicio).localeCompare(a.data + a.inicio));
   if (!lista.length) {
     $("list").innerHTML = rows.length
       ? `<div class="empty"><b>Nada aqui.</b><span>Nenhum lançamento com este status.</span></div>`
-      : `<div class="empty"><b>Nenhum lançamento ainda.</b><span>Preencha a aba “Novo lançamento”. Ele entra na fila e o robô lança no NAJ na próxima hora cheia.</span></div>`;
+      : `<div class="empty"><b>Nenhum lançamento ainda.</b><span>Preencha “Novo lançamento”. Ele entra na fila e o robô lança no NAJ na próxima verificação.</span></div>`;
     return;
   }
-  let html = "", diaAtual = "";
+  let html = "", dia = "";
   for (const r of lista) {
-    const dia = filtro === "todos" ? "" : r.data;
-    if (dia && dia !== diaAtual) {
-      const tot = lista.filter(x => x.data === dia).reduce((a, x) => a + durDe(x), 0);
-      html += `<div class="day"><span>${dataBR(dia)}</span><span>${fmtDur(tot)}</span></div>`; diaAtual = dia;
+    if (filtro !== "todos" && r.data !== dia) {
+      dia = r.data;
+      html += `<div class="day"><span>${dataBR(dia)}</span><span>${fmtDur(lista.filter(x => x.data === dia).reduce((a, x) => a + durDe(x), 0))}</span></div>`;
     }
-    const st = r.status || "pendente";
-    html += `<article class="card ${st}">
-      <div class="top"><span class="pill ${st}">${STATUS[st] || st}</span><span class="time">${dataBR(r.data)} · ${esc(r.inicio)}–${esc(r.termino)} · ${fmtDur(durDe(r))}</span></div>
-      <div class="client">${esc(r.clienteNaj || r.cliente)}</div>
-      <div class="meta">${r.processo ? `<span class="mono">${esc(r.processo)}</span> · ` : "Sem processo · "}${esc(r.area)} · ${esc(r.tipo)}${r.disponivelCliente === false ? " · oculto ao cliente" : ""}</div>
-      <div class="desc">${esc(r.descricao)}</div>
-      ${st === "erro" ? `<div class="problem"><b>${esc(r.mensagem || "O robô não conseguiu lançar.")}</b>${(r.candidatos || []).length ? `<span>Toque no cliente correto para devolver à fila:</span><div class="chips">${r.candidatos.map((c, i) => `<button type="button" data-pick="${r.id}" data-i="${i}">${esc(c)}</button>`).join("")}</div>` : ""}</div>` : ""}
-      ${st === "lancado" ? `<div class="meta">${esc(r.mensagem || "Lançado no NAJ.")}${r.processoNaj ? `<br>${esc(r.processoNaj)}` : ""}</div>` : ""}
-      ${st === "pendente" || st === "erro" ? `<div class="actions">${confirmDel === r.id
-        ? `<span class="confirm">Apagar este lançamento? <button class="ghost danger" type="button" data-delok="${r.id}">Apagar</button><button class="ghost" type="button" data-delno="1">Manter</button></span>`
-        : `<button class="ghost" type="button" data-del="${r.id}">Apagar</button><button class="ghost" type="button" data-edit="${r.id}">${st === "erro" ? "Corrigir" : "Editar"}</button>`}</div>` : ""}
-    </article>`;
+    html += linha(r, false);
   }
   $("list").innerHTML = html;
 }
@@ -398,12 +570,13 @@ $("list").addEventListener("click", async ev => {
 let toastT;
 function toast(t) { $("toast").textContent = t; $("toast").hidden = false; clearTimeout(toastT); toastT = setTimeout(() => $("toast").hidden = true, 3500); }
 
-// ---------- dados ----------
+// ---------- início ----------
 limpar();
-try { const a = localStorage.getItem("aba"); if (a === "lista") abrirAba("lista"); } catch {}
+render();
+try { const v = localStorage.getItem("view"); if (["painel", "novo", "lista"].includes(v)) ir(v); } catch {}
 (async () => {
-  db = await window.claude?.use?.("db");
-  if (!db) { $("offline").hidden = false; $("list").innerHTML = `<div class="empty"><b>Sem conexão.</b><span>Abra pelo claude.ai para ver seus lançamentos.</span></div>`; return; }
+  const db = await window.claude?.use?.("db");
+  if (!db) { $("offline").hidden = false; return; }
   col = db.collection("lancamentos");
   col.onSnapshot(snap => { rows = snap.docs.map(d => ({ id: d.id, ...d.data() })); render(); },
     () => { $("offline").hidden = false; });
