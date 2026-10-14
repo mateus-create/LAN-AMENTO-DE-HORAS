@@ -1,7 +1,9 @@
 // Baixa do NAJ as atividades de TODOS os usuários num período e a área de cada processo,
 // para o painel de administrador montar relatórios por usuário e por núcleo.
 // Uso: node robo/naj-relatorio.js <pasta de saída> <data inicial DD/MM/AAAA> [data final DD/MM/AAAA]
-// Gera atividades.json [[dataISO, "HH:MM", minutos, usuário, cliente, número do processo, área do processo, descrição, parte contrária], ...]
+// Gera atividades.json [[dataISO, "HH:MM", minutos, usuário, cliente, número do processo, área do processo, descrição, parte contrária,
+//   área jurídica da atividade, código do processo, código da atividade], ...]
+// Opções: --cache <arquivo> (detalhes já lidos, reaproveitados entre execuções), --paralelo <n> (sessões simultâneas, padrão 3).
 // e usuarios.json (usuários ativos do NAJ). Só pesquisa: nada é gravado no NAJ.
 const fs = require('fs');
 const path = require('path');
@@ -88,42 +90,90 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
   fs.writeFileSync(path.join(saida, 'processos-areas.json'), JSON.stringify(procs.map(c => [c[1], c[2], c[3], c[4], c[5]])));
   console.log(`processos: ${procs.length}, áreas: ${areas.size}`);
 
-  // 2) atividades de todos os usuários no período
-  p = await entrar(browser, 'Atividades');
-  const usuarios = await p.$$eval('#TIWCOMBOBOX1 option', os => os.map(o => o.text.trim()).filter(t => t && !t.startsWith('*') && !t.startsWith('-')));
-  await p.selectOption('#TIWCOMBOBOX1', { index: 0 }); // "* Todos os Usuários *"
-  await quieto(p);
-  await p.fill('#TIWEDIT1', de); await p.press('#TIWEDIT1', 'Tab'); await quieto(p);
-  await p.fill('#TIWEDIT2', ate || hojeBR); await p.press('#TIWEDIT2', 'Tab'); await quieto(p);
-  await p.locator('#TIWGRADBUTTON1').evaluate(e => e.click());
-  await quieto(p);
-  const conferePeriodo = [await p.inputValue('#TIWEDIT1'), await p.inputValue('#TIWEDIT2')];
-  const esperado = Number(((await p.innerText('body')).match(/Total de:\s*([\d.]+)\s*Registro/) || [])[1]?.replace(/\./g, '')) || 0;
-  console.log(`atividades no período ${conferePeriodo.join(' a ')}: ${esperado}`);
-  const brutas = await paginar(p, '#TIWEDIT3', '#TIWEDIT4', () => p.$$eval('tr', trs => trs.filter(t => t.offsetParent !== null)
-    .map(t => [...t.cells].map(c => c.innerText.trim())).filter(c => c.length >= 8 && /^\d{2}\/\d{2}\/\d{4}/.test(c[3] || '')).map(c => c.slice(3, 8))), 'atividades');
+  // 2) atividades de todos os usuários no período. A lista não mostra o processo vinculado nem a área jurídica
+  //    da atividade, então cada atividade nova é aberta (só leitura) para ler esses campos; as já lidas ficam no cache.
+  const iCache = process.argv.indexOf('--cache');
+  const arqCache = iCache > 0 ? process.argv[iCache + 1] : path.join(saida, 'detalhes.json');
+  const cache = fs.existsSync(arqCache) ? JSON.parse(fs.readFileSync(arqCache, 'utf8')) : {};
+  const salvarCache = () => fs.writeFileSync(arqCache, JSON.stringify(cache));
+  const iTrab = process.argv.indexOf('--paralelo');
+  const nTrab = iTrab > 0 ? Math.max(1, Number(process.argv[iTrab + 1]) || 1) : 3;
+
+  async function abrirLista() {
+    const q = await entrar(browser, 'Atividades');
+    await q.selectOption('#TIWCOMBOBOX1', { index: 0 }); // "* Todos os Usuários *"
+    await quieto(q);
+    await q.fill('#TIWEDIT1', de); await q.press('#TIWEDIT1', 'Tab'); await quieto(q);
+    await q.fill('#TIWEDIT2', ate || hojeBR); await q.press('#TIWEDIT2', 'Tab'); await quieto(q);
+    await q.locator('#TIWGRADBUTTON1').evaluate(e => e.click());
+    await quieto(q);
+    return q;
+  }
+  const lerLinhas = q => q.$$eval('tr', trs => trs.filter(t => t.offsetParent !== null)
+    .map(t => [...t.cells].map(c => c.innerText.trim())).filter(c => c.length >= 8 && /^\d{2}\/\d{2}\/\d{4}/.test(c[3] || '')).map(c => c.slice(3, 8)));
+  const chaveDe = ([dataHora, , desc, info, usuario]) => [dataHora, usuario, desc.replace(/\s+/g, ' ').slice(0, 80), info].join('|');
+  async function lerDetalhe(q, i) {
+    await q.locator('img[src*="edit-row"]').filter({ visible: true }).nth(i).evaluate(e => e.click());
+    await quieto(q);
+    const v = await q.$$eval('input[type=text],select', els => Object.fromEntries(els.filter(e => e.offsetParent !== null && /^(ED|CB)[A-Z]+\d*$/.test(e.id))
+      .map(e => [e.id.replace(/\d+$/, ''), e.tagName === 'SELECT' ? (e.options[e.selectedIndex] || {}).text || '' : e.value])));
+    await q.locator('img[id^=IMFECHARJANELA]').filter({ visible: true }).last().evaluate(e => e.click());
+    await quieto(q);
+    const area = (v.CBAREAJURIDICA || '').replace(/^\*.*\*$/, '').trim();
+    return { codAtiv: v.EDCODIGOATIVIDADE || '', codProc: v.EDCODIGOPROCESSO || '', areaAtiv: area, tempo: v.EDTEMPOTOTAL || '' };
+  }
+
+  let p0 = await abrirLista();
+  const usuarios = await p0.$$eval('#TIWCOMBOBOX1 option', os => os.map(o => o.text.trim()).filter(t => t && !t.startsWith('*') && !t.startsWith('-')));
+  const conferePeriodo = [await p0.inputValue('#TIWEDIT1'), await p0.inputValue('#TIWEDIT2')];
+  const esperado = Number(((await p0.innerText('body')).match(/Total de:\s*([\d.]+)\s*Registro/) || [])[1]?.replace(/\./g, '')) || 0;
+  const totalPaginas = Number(await p0.inputValue('#TIWEDIT4')) || 1;
+  console.log(`atividades no período ${conferePeriodo.join(' a ')}: ${esperado} em ${totalPaginas} páginas; ${Object.keys(cache).length} já lidas antes`);
+  await p0.context().close();
+
+  const brutas = [];
+  let lidas = 0;
+  async function trabalhador(t) {
+    const q = await abrirLista();
+    for (let pg = 1 + t; pg <= totalPaginas; pg += nTrab) {
+      if (pg > 1) { await q.fill('#TIWEDIT3', String(pg)); await q.press('#TIWEDIT3', 'Enter'); await quieto(q); }
+      if (await q.inputValue('#TIWEDIT3') !== String(pg)) throw new Error(`Não consegui abrir a página ${pg} da lista de atividades.`);
+      const linhas = await lerLinhas(q);
+      for (let i = 0; i < linhas.length; i++) {
+        const k = chaveDe(linhas[i]);
+        if (!cache[k]) { cache[k] = await lerDetalhe(q, i); lidas++; if (lidas % 50 === 0) { salvarCache(); console.log(`detalhes lidos: ${lidas}`); } }
+        brutas.push([...linhas[i], cache[k]]);
+      }
+    }
+    await q.context().close();
+  }
+  await Promise.all(Array.from({ length: nTrab }, (_, t) => trabalhador(t)));
+  salvarCache();
   await browser.close();
 
+  const areaPorCodigo = new Map(procs.map(c => [c[1], (c[5] || '').trim()]));
   const vistos = new Set();
   const atividades = [];
-  for (const [dataHora, tempo, desc, info, usuario] of brutas) {
-    const chave = [dataHora, usuario, desc.slice(0, 60), info].join('|');
+  for (const [dataHora, tempo, desc, info, usuario, det] of brutas) {
+    const chave = det.codAtiv || [dataHora, usuario, desc.slice(0, 80), info].join('|');
     if (vistos.has(chave)) continue;
     vistos.add(chave);
     const [d, h] = dataHora.split(' ');
     const [dd, mm, aa] = d.split('/');
-    const [th, tm] = /^\d+:\d+/.test(tempo) ? tempo.split(':').map(Number) : [0, 0];
+    const t = /^\d+:\d+/.test(det.tempo) ? det.tempo : tempo;
+    const [th, tm] = /^\d+:\d+/.test(t) ? t.split(':').map(Number) : [0, 0];
     // "Mais informações" = "CLIENTE x PARTE CONTRÁRIA - número" (número opcional)
     const m = info.match(/^(.*?)(?:\s+x\s+(.*?))?(?:\s+-\s+([\d.\-\/ ()]{10,}))?$/s) || [];
     const cliente = (m[1] || info).trim(), contraria = (m[2] || '').trim(), numero = (m[3] || '').trim();
-    // área só quando a atividade identifica o processo: pelo número, ou por cliente + parte contrária
-    const area = dig(numero).length >= 10 ? unica(areaPorNumero.get(dig(numero)))
-      : contraria ? unica(areaPorPartes.get(norm(cliente) + '|' + norm(contraria))) : '';
-    atividades.push([`${aa}-${mm}-${dd}`, (h || '').slice(0, 5), th * 60 + tm, usuario, cliente, numero, area, desc.replace(/\s+/g, ' ').slice(0, 140), contraria]);
+    // área do processo pelo código exato do processo vinculado à atividade
+    const areaProc = det.codProc ? (areaPorCodigo.get(det.codProc) || '') : '';
+    atividades.push([`${aa}-${mm}-${dd}`, (h || '').slice(0, 5), th * 60 + tm, usuario, cliente, numero, areaProc, desc.replace(/\s+/g, ' ').slice(0, 140), contraria, det.areaAtiv, det.codProc, det.codAtiv]);
   }
   if (esperado && atividades.length < esperado * 0.97) throw new Error(`Li ${atividades.length} atividades, mas o NAJ informa ${esperado}.`);
   fs.writeFileSync(path.join(saida, 'atividades.json'), JSON.stringify(atividades));
   fs.writeFileSync(path.join(saida, 'usuarios.json'), JSON.stringify(usuarios));
   fs.writeFileSync(path.join(saida, 'areas.json'), JSON.stringify([...areas.entries()].sort((a, b) => b[1] - a[1])));
-  console.log(`atividades: ${atividades.length} (com área: ${atividades.filter(a => a[6]).length}); usuários: ${usuarios.length}`);
+  const areasAtiv = new Map(); atividades.forEach(a => a[9] && areasAtiv.set(a[9], (areasAtiv.get(a[9]) || 0) + 1));
+  fs.writeFileSync(path.join(saida, 'areas-atividade.json'), JSON.stringify([...areasAtiv.entries()].sort((a, b) => b[1] - a[1])));
+  console.log(`atividades: ${atividades.length} (com processo: ${atividades.filter(a => a[10]).length}, com área do processo: ${atividades.filter(a => a[6]).length}, com área jurídica: ${atividades.filter(a => a[9]).length}); usuários: ${usuarios.length}`);
 })();

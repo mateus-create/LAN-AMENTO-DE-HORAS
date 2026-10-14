@@ -576,8 +576,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
           </div>
           <div class="card"><div class="card-head"><h2>Pessoa × núcleo</h2></div><div class="tabwrap"><table class="mtx" id="rMatriz"></table></div></div>
           <details class="card"><summary><b>Qual núcleo cada área do processo representa</b> <span class="hint">— a área vem do cadastro do processo no NAJ</span></summary>
-            <div class="hint" style="margin:10px 0">Atividades sem processo, ou de processo sem área, contam no núcleo principal da pessoa.</div>
+            <div class="hint" style="margin:10px 0">A hora conta primeiro pela área do processo vinculado. Sem processo, pela Área Jurídica da atividade (quadro abaixo). Na dúvida, no núcleo principal da pessoa.</div>
             <div class="mapa" id="rMapa"></div>
+            <h3 style="margin:18px 0 6px;font-size:.92rem">Área Jurídica da atividade (quando não há processo)</h3>
+            <div class="mapa" id="rMapaAtiv"></div>
             <div class="field" style="margin-top:12px"><label for="rNucleosLista">Núcleos do escritório (separados por vírgula)</label><input id="rNucleosLista"></div>
             <div class="form-foot"><button class="btn" type="button" id="rMapaSalvar">Salvar</button></div>
           </details>
@@ -1315,8 +1317,9 @@ function periodo() {
   return de <= ate ? [de, ate] : [ate, de];
 }
 function nucleoDe(a) {
-  // a = [data, hora, minutos, usuário NAJ, cliente, número, área do processo, descrição]
-  const n = a[6] && cfgNucleos.mapa[a[6]];
+  // a = [data, hora, minutos, usuário NAJ, cliente, número, área do processo, descrição, parte contrária, área jurídica da atividade, ...]
+  // 1) área do processo vinculado; 2) área jurídica da própria atividade; 3) na dúvida, o núcleo principal da pessoa
+  const n = (a[6] && cfgNucleos.mapa[a[6]]) || (a[9] && (cfgNucleos.mapaAtividade || {})[a[9]]);
   if (n) return n;
   const m = Object.values(cfgMembros).find(x => x.najUsuario === a[3]);
   return (m && m.principal) || "Sem núcleo";
@@ -1353,9 +1356,12 @@ function renderRel() {
     pessoas.map(u => `<tr><td>${esc(u)}</td>${nucs.map(n => { const m = cel(u, n); return `<td>${m ? fmtDur(m) : "–"}</td>`; }).join("")}<td><b>${fmtDur(cel(u, ""))}</b></td></tr>`).join("") +
     `<tr class="tot"><td>Total</td>${nucs.map(n => `<td>${fmtDur(cel("", n))}</td>`).join("")}<td>${fmtDur(tot)}</td></tr>` : '<tr><td class="hint">Nada no período.</td></tr>';
   // mapa área → núcleo
-  if (!$("rMapa").contains(document.activeElement)) {
+  if (!$("rMapa").contains(document.activeElement) && !$("rMapaAtiv").contains(document.activeElement)) {
     const areas = (relInfo && relInfo.areas) || [];
     $("rMapa").innerHTML = areas.length ? areas.map(([ar, qt], i) => `<label>${esc(ar)} <small>${qt} processos</small><select data-area="${i}"><option value="">Núcleo principal da pessoa</option>${nucleosLista().map(n => `<option ${cfgNucleos.mapa[ar] === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`).join("") : '<span class="hint">As áreas aparecem depois que o robô baixar o relatório.</span>';
+    const areasAtiv = (relInfo && relInfo.areasAtividade) || AREAS.map(a => [a, 0]);
+    const mA = cfgNucleos.mapaAtividade || {};
+    $("rMapaAtiv").innerHTML = areasAtiv.map(([ar, qt], i) => `<label>${esc(ar)} ${qt ? `<small>${qt} atividades</small>` : ""}<select data-areaativ="${esc(ar)}"><option value="">Núcleo principal da pessoa</option>${nucleosLista().map(n => `<option ${mA[ar] === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`).join("");
     if (document.activeElement !== $("rNucleosLista")) $("rNucleosLista").value = nucleosLista().join(", ");
   }
 }
@@ -1363,14 +1369,16 @@ function renderRel() {
 $("rMapaSalvar").onclick = async () => {
   const areas = (relInfo && relInfo.areas) || [], mapa = {};
   $("rMapa").querySelectorAll("select").forEach(s => { if (s.value) mapa[areas[+s.dataset.area][0]] = s.value; });
+  const mapaAtividade = {};
+  $("rMapaAtiv").querySelectorAll("select").forEach(s => { if (s.value) mapaAtividade[s.dataset.areaativ] = s.value; });
   const lista = $("rNucleosLista").value.split(",").map(x => x.trim()).filter(Boolean);
-  try { await dbRef.doc("config/nucleos").set({ lista: lista.length ? lista : NUCLEOS_PADRAO, mapa }); toast("Núcleos salvos."); } catch { toast("Não consegui salvar. Tente de novo."); }
+  try { await dbRef.doc("config/nucleos").set({ lista: lista.length ? lista : NUCLEOS_PADRAO, mapa, mapaAtividade }); toast("Núcleos salvos."); } catch { toast("Não consegui salvar. Tente de novo."); }
 };
 let downloads = null;
 $("rCsv").onclick = async () => {
   const q = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const linhas = [["Data", "Hora", "Minutos", "Horas", "Pessoa", "Núcleo", "Área do processo", "Cliente", "Processo", "Descrição"].map(q).join(";")]
-    .concat(relFiltrado.map(a => [dataBR(a[0]), a[1], a[2], fmtDur(a[2]), a[3], nucleoDe(a), a[6], a[4], a[5], a[7]].map(q).join(";")));
+  const linhas = [["Data", "Hora", "Minutos", "Horas", "Pessoa", "Núcleo", "Área do processo", "Área jurídica da atividade", "Cliente", "Processo", "Descrição"].map(q).join(";")]
+    .concat(relFiltrado.map(a => [dataBR(a[0]), a[1], a[2], fmtDur(a[2]), a[3], nucleoDe(a), a[6], a[9] || "", a[4], a[5], a[7]].map(q).join(";")));
   const [de, ate] = periodo();
   try { await downloads.save({ filename: `horas-${de}-a-${ate}.csv`, data: "﻿" + linhas.join("\r\n") }); }
   catch (e) { if (e && e.code !== "cancelled") toast("Não consegui gerar a planilha."); }

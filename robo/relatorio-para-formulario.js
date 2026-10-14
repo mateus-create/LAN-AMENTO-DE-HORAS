@@ -33,6 +33,7 @@ fs.writeFileSync(path.join(saida, 'info.json'), JSON.stringify({
   documentos: [...mantidos, ...novos].sort(),
   usuarios: ler(path.join(entrada, 'usuarios.json')),
   areas: ler(path.join(entrada, 'areas.json')),
+  areasAtividade: fs.existsSync(path.join(entrada, 'areas-atividade.json')) ? ler(path.join(entrada, 'areas-atividade.json')) : [],
 }));
 fs.writeFileSync(path.join(saida, 'apagar.json'), JSON.stringify(apagar));
 for (const f of fs.readdirSync(saida)) console.log(f, fs.statSync(path.join(saida, f)).size, 'bytes');
