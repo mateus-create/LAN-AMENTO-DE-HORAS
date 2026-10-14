@@ -105,7 +105,7 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
   const cache = fs.existsSync(arqCache) ? JSON.parse(fs.readFileSync(arqCache, 'utf8')) : {};
   const salvarCache = () => fs.writeFileSync(arqCache, JSON.stringify(cache));
   const iTrab = process.argv.indexOf('--paralelo');
-  const nTrab = iTrab > 0 ? Math.max(1, Number(process.argv[iTrab + 1]) || 1) : 3;
+  const nTrab = iTrab > 0 ? Math.max(1, Number(process.argv[iTrab + 1]) || 1) : 2;
 
   async function abrirLista() {
     const q = await entrar(browser, 'Atividades');
@@ -150,10 +150,12 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
   let lidas = 0, naoConferidas = 0;
   async function trabalhador(t) {
     const q = await abrirLista();
+    q.setDefaultTimeout(20000);
     for (let pg = 1 + t; pg <= totalPaginas; pg += nTrab) {
       if (pg > 1) { await q.fill('#TIWEDIT3', String(pg)); await q.press('#TIWEDIT3', 'Enter'); await quieto(q); }
       if (await q.inputValue('#TIWEDIT3') !== String(pg)) throw new Error(`Não consegui abrir a página ${pg} da lista de atividades.`);
       let linhas = await lerLinhas(q);
+      console.log(`[sessão ${t + 1}] página ${pg}/${totalPaginas} (${new Date().toISOString().slice(11, 19)})`);
       for (let i = 0; i < linhas.length; i++) {
         const k = chaveDe(linhas[i]);
         if (!cache[k]) {
