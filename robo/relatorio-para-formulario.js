@@ -26,6 +26,8 @@ for (const m of meses) {
 const mesDe = id => id.slice(2, 9);
 const mantidos = (infoAtual.documentos || []).filter(id => !meses.includes(mesDe(id)));
 const apagar = (infoAtual.documentos || []).filter(id => meses.includes(mesDe(id)) && !novos.includes(id));
+// áreas jurídicas dos meses mantidos continuam na lista (para o mapa de núcleos)
+const juntarAreas = (novas, antigas) => [...novas, ...antigas.filter(([n]) => !novas.some(([x]) => x === n))];
 const datas = atividades.map(a => a[0]).sort();
 fs.writeFileSync(path.join(saida, 'info.json'), JSON.stringify({
   de: [infoAtual.de, datas[0]].filter(Boolean).sort()[0] || null,
@@ -34,7 +36,7 @@ fs.writeFileSync(path.join(saida, 'info.json'), JSON.stringify({
   documentos: [...mantidos, ...novos].sort(),
   usuarios: [...new Set([...(infoAtual.usuarios || []), ...ler(path.join(entrada, 'usuarios.json'))])].sort(),
   areas: ler(path.join(entrada, 'areas.json')),
-  areasAtividade: fs.existsSync(path.join(entrada, 'areas-atividade.json')) ? ler(path.join(entrada, 'areas-atividade.json')) : [],
+  areasAtividade: juntarAreas(fs.existsSync(path.join(entrada, 'areas-atividade.json')) ? ler(path.join(entrada, 'areas-atividade.json')) : [], infoAtual.areasAtividade || []),
 }));
 fs.writeFileSync(path.join(saida, 'apagar.json'), JSON.stringify(apagar));
 for (const f of fs.readdirSync(saida)) console.log(f, fs.statSync(path.join(saida, f)).size, 'bytes');
