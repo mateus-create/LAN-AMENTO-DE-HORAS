@@ -1328,12 +1328,16 @@ function nucleoDe(a) {
   const pn = (cfgNucleos.pessoas || {})[a[3]];
   if (pn && pn.principal) return pn.principal;
   const m = Object.values(cfgMembros).find(x => x.najUsuario === a[3]);
-  return (m && m.principal) || "Sem núcleo";
+  if (m && m.principal) return m.principal;
+  // quem lança para todas as áreas e registrou atividade sem área definida (ex.: Geral, Procedimentos Internos)
+  if ((pn && pn.todos) || (m && m.todos)) return "Todas as áreas";
+  return "Sem núcleo";
 }
 let relFiltrado = [];
 function renderRel() {
   const [de, ate] = periodo();
-  const nucs = [...nucleosLista(), "Sem núcleo"];
+  const usados = new Set(relItens.map(nucleoDe));
+  const nucs = [...nucleosLista(), ...["Todas as áreas", "Sem núcleo"].filter(n => usados.has(n))];
   const usuarios = [...new Set(relItens.map(a => a[3]))].sort();
   const keepN = $("rNucleo").value, keepU = $("rUsuario").value, keepA = $("rArea").value;
   const areasProc = [...new Set(relItens.map(a => a[6]).filter(Boolean))].sort((x, y) => x.localeCompare(y, "pt-BR"));
