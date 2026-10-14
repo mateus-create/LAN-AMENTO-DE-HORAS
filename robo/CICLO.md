@@ -4,6 +4,8 @@ Formulário: https://claude.ai/artifact/DW1sanezeJtNKf3D3N2uyf
 Armazenamento: coleção `lancamentos` do formulário (ferramenta ArtifactData, `url` acima).
 Credenciais: variáveis de ambiente `NAJ_URL`, `NAJ_USUARIO`, `NAJ_SENHA` (nunca copiar os valores para arquivos ou mensagens).
 
+Campos opcionais que o robô usa quando existem: `clienteCod` (código do cliente no NAJ) e `processoCod` (código do processo no NAJ).
+
 Status de um lançamento: `pendente` → `processando` → `lancado` ou `erro`.
 O usuário corrige um `erro` no formulário e ele volta para `pendente`.
 

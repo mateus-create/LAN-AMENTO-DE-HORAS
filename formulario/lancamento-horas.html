@@ -178,6 +178,40 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
 .err { color: var(--bad); font-size: .82rem; font-weight: 600 }
 .form-foot { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 16px }
 
+/* busca de cliente e processo */
+.combo { position: relative }
+.sug { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 15; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgb(0 0 0 / .14); max-height: 340px; overflow-y: auto; padding: 4px }
+.sug button { display: grid; gap: 1px; width: 100%; text-align: left; border: 0; background: none; color: var(--ink); padding: 9px 10px; border-radius: 8px; cursor: pointer; font: 600 .86rem var(--sans) }
+.sug button:hover, .sug button[aria-selected="true"] { background: var(--sunken) }
+.sug small { color: var(--muted); font-weight: 500; font-size: .74rem }
+.sug .free { border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; color: var(--muted) }
+.sug .none { padding: 10px; color: var(--muted); font-size: .82rem }
+.picked { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--ok-soft); color: var(--ok); border-radius: 9px; padding: 7px 10px; font-size: .78rem; font-weight: 700 }
+.picked.free { background: var(--warn-soft); color: var(--warn) }
+.picked button { margin-left: auto; border: 0; background: none; color: inherit; font: 700 .76rem var(--sans); cursor: pointer; text-decoration: underline }
+.procinfo { background: var(--sunken); border-radius: 11px; padding: 11px 13px; display: grid; gap: 2px; font-size: .84rem }
+.procinfo b { font-weight: 700 }
+.procinfo span { color: var(--muted); font-size: .78rem }
+.procinfo.warn { background: var(--warn-soft); color: var(--warn); font-weight: 600 }
+.proclist { display: grid; gap: 6px }
+.proclist > span { font-size: .78rem; font-weight: 700; color: var(--muted) }
+.proclist button { text-align: left; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 10px; padding: 9px 11px; cursor: pointer; font: 600 .82rem var(--sans); display: grid; gap: 1px }
+.proclist button:hover { border-color: var(--muted) }
+.proclist small { color: var(--muted); font-weight: 500; font-size: .74rem }
+.sync { color: var(--muted); font-size: .76rem }
+
+/* lançar conversando */
+.talk { display: grid; gap: 12px; background: var(--hero); color: var(--hero-ink); border: 0 }
+.talk-head { display: flex; gap: 12px; align-items: flex-start }
+.talk-ico { width: 40px; height: 40px; border-radius: 50%; background: #2a2f38; display: grid; place-items: center; flex: none }
+.talk-ico svg { width: 20px; height: 20px }
+.talk .hint { color: var(--hero-muted) }
+.talk textarea { background: #20242c; color: var(--hero-ink); border-color: #2f3540; min-height: 84px }
+.talk textarea::placeholder { color: #7d8696 }
+.talk-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap }
+.talk-msg { font-size: .8rem; color: var(--hero-muted) }
+.talk-msg.bad { color: #ff8a80 } .talk-msg.ok { color: var(--ring) }
+
 .offline { background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 12px; font-size: .85rem; font-weight: 600 }
 .toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: 12px; font-size: .88rem; font-weight: 600; z-index: 30; max-width: calc(100% - 32px); box-shadow: 0 8px 24px rgb(0 0 0 / .2) }
 
@@ -226,6 +260,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
     <div class="side-foot">
       <span class="live"><i></i>Robô ativo</span>
       <span>Confere a fila de hora em hora e lança no NAJ.</span>
+      <span id="syncInfo"></span>
     </div>
   </aside>
 
@@ -276,21 +311,39 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
     <section id="v-novo" class="view" hidden>
       <div style="display:grid;gap:18px">
         <div class="page-head"><div><div class="crumb">Atividades / Nova</div><h1 id="formTitle">Novo lançamento</h1></div></div>
+        <div class="card talk" id="talkCard" hidden>
+          <div class="talk-head">
+            <span class="talk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span>
+            <div><h2>Lançar conversando</h2><span class="hint">Conte o que você fez com suas palavras. No celular, toque no microfone do teclado para falar em vez de digitar. O Claude preenche o formulário abaixo para você conferir.</span></div>
+          </div>
+          <textarea id="talkTxt" placeholder="Ex.: hoje das 9h às 10h30 revisei o contrato social da Esquadrias Schneider, cível, contratos fixos"></textarea>
+          <div class="talk-foot"><span class="talk-msg" id="talkMsg" role="status"></span><button class="btn light" type="button" id="talkBtn">Preencher o formulário</button></div>
+        </div>
+
         <form id="form" class="card" novalidate>
           <div class="editing" id="editing" hidden><span id="editingTxt">Editando lançamento</span><button class="ghost" type="button" id="cancelEdit">Cancelar edição</button></div>
 
           <div class="fgrid">
-            <div class="field">
+            <div class="field combo full">
               <label for="cliente">Cliente</label>
-              <input id="cliente" autocomplete="off" list="clientesUsados" placeholder="Ex.: ESQUADRIAS DE ALUMINIO SCHNEIDER LTDA">
-              <datalist id="clientesUsados"></datalist>
-              <span class="hint">Como está cadastrado no NAJ. Se houver nomes parecidos, o robô mostra as opções.</span>
+              <input id="cliente" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="cliSug" placeholder="Digite parte do nome ou o CPF/CNPJ">
+              <div class="sug" id="cliSug" role="listbox" hidden></div>
+              <div class="picked" id="cliPicked" hidden></div>
+              <span class="hint" id="cliHint">Escolha o cliente na lista do NAJ.</span>
+            </div>
+
+            <div class="field">
+              <label for="processoCod">Código do processo no NAJ <span class="opt">(opcional)</span></label>
+              <input id="processoCod" inputmode="numeric" autocomplete="off" placeholder="Ex.: 5027">
+              <span class="hint">O número de cadastro do processo no NAJ.</span>
             </div>
             <div class="field">
               <label for="processo">Número do processo <span class="opt">(opcional)</span></label>
-              <input id="processo" class="mono" inputmode="numeric" autocomplete="off" placeholder="0000000-00.0000.0.00.0000">
-              <span class="hint">Com o número, o NAJ vincula o processo e confere se é do cliente.</span>
+              <input id="processo" inputmode="numeric" autocomplete="off" placeholder="0000000-00.0000.0.00.0000">
+              <span class="hint">Use este ou o código; não precisa dos dois.</span>
             </div>
+            <div class="full" id="procInfoWrap" hidden><div class="procinfo" id="procInfo"></div></div>
+            <div class="proclist full" id="procList" hidden></div>
 
             <div class="field">
               <label for="area">Área jurídica</label>
@@ -358,6 +411,11 @@ const STATUS = { pendente: "Na fila", processando: "Lançando agora", erro: "Pre
 const $ = id => document.getElementById(id);
 
 let col = null, rows = [], filtro = "todos", editId = null, confirmDel = null;
+// cadastros do NAJ baixados pelo robô: clientes [código, nome, CPF/CNPJ] e processos [código, cliente, parte contrária, número, "comarca · classe"]
+let CLI = [], PROC = [], cadOk = false;
+const procPorCod = new Map(), cliPorNome = new Map();
+// escolhas feitas no formulário
+let sel = { clienteCod: "", clienteLivre: false, processoCod: "" };
 
 // ---------- utilidades ----------
 const hoje = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
@@ -389,6 +447,8 @@ $("tipos").innerHTML = TIPOS.map(([t, c]) => `<label><input type="radio" name="t
 function limpar() {
   editId = null;
   $("form").reset();
+  sel = { clienteCod: "", clienteLivre: false, processoCod: "" };
+  mostrarCliente(); mostrarProcesso(); fecharSug();
   $("data").value = hoje();
   $("disp").checked = true;
   $("editing").hidden = true;
@@ -411,7 +471,9 @@ $("limparBtn").onclick = limpar;
 function lerForm() {
   return {
     cliente: $("cliente").value.trim(),
+    clienteCod: sel.clienteCod,
     processo: $("processo").value.trim(),
+    processoCod: $("processoCod").value.trim(),
     area: $("area").value,
     tipo: (document.querySelector('input[name="tipo"]:checked') || {}).value || "",
     descricao: $("descricao").value.trim(),
@@ -431,6 +493,8 @@ function validar(v) {
   if (!v.inicio) falta.push("horário de início");
   if (!v.termino) falta.push("horário de término");
   if (falta.length) return "Preencha: " + falta.join(", ") + ".";
+  if (cadOk && !v.clienteCod && !sel.clienteLivre) return "Escolha o cliente na lista do NAJ. Se ele não aparecer, use a opção “usar o nome digitado”.";
+  if (v.processoCod && !/^\d+$/.test(v.processoCod)) return "O código do processo no NAJ tem só números.";
   if (min(v.termino) <= min(v.inicio)) return "O horário de término precisa ser depois do início.";
   if (v.processo && v.processo.replace(/\D/g, "").length < 7) return "O número do processo parece incompleto. Deixe em branco para lançar só pelo cliente.";
   return "";
@@ -467,7 +531,9 @@ $("form").addEventListener("submit", async ev => {
 
 function editar(r) {
   editId = r.id;
-  $("cliente").value = r.cliente || ""; $("processo").value = r.processo || "";
+  $("cliente").value = r.cliente || ""; $("processo").value = r.processo || ""; $("processoCod").value = r.processoCod || "";
+  sel = { clienteCod: r.clienteCod || "", clienteLivre: !r.clienteCod, processoCod: r.processoCod || "" };
+  mostrarCliente(); mostrarProcesso();
   $("area").value = r.area || ""; $("data").value = r.data || hoje();
   $("descricao").value = r.descricao || ""; $("inicio").value = r.inicio || ""; $("termino").value = r.termino || "";
   $("disp").checked = r.disponivelCliente !== false;
@@ -480,13 +546,226 @@ function editar(r) {
   atualizarDur(); ir("novo"); $("cliente").focus();
 }
 
+// ---------- busca no cadastro do NAJ ----------
+const norm = t => (t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim();
+const dig = t => (t || "").replace(/\D/g, "");
+let idxCli = [];
+
+function buscarClientes(q, limite = 8) {
+  const n = norm(q), d = dig(q);
+  if (!n) return [];
+  const palavras = n.split(" ");
+  const res = [];
+  for (const c of idxCli) {
+    const ok = (d.length >= 5 && c.d.includes(d)) || palavras.every(w => c.n.includes(w));
+    if (!ok) continue;
+    const peso = c.n === n ? 0 : c.n.startsWith(n) ? 1 : (" " + c.n).includes(" " + palavras[0]) ? 2 : 3;
+    res.push([peso, c.item]);
+  }
+  return res.sort((a, b) => a[0] - b[0] || a[1][1].localeCompare(b[1][1], "pt-BR")).slice(0, limite).map(x => x[1]);
+}
+
+let sugAtiva = -1, sugItens = [];
+function fecharSug() { $("cliSug").hidden = true; $("cliente").setAttribute("aria-expanded", "false"); sugAtiva = -1; }
+function abrirSug() {
+  const q = $("cliente").value;
+  if (!cadOk || !q.trim()) { fecharSug(); return; }
+  sugItens = buscarClientes(q);
+  let h = sugItens.length
+    ? sugItens.map((c, i) => `<button type="button" role="option" data-cli="${i}" aria-selected="${i === sugAtiva}">${esc(c[1])}<small>Código ${esc(c[0])}${c[2] ? " · " + esc(c[2]) : ""}</small></button>`).join("")
+    : `<div class="none">Nenhum cliente do NAJ com “${esc(q)}”.</div>`;
+  h += `<button type="button" class="free" data-livre="1">Usar “${esc(q.trim())}” mesmo assim<small>O robô procura este nome no NAJ e avisa se não achar.</small></button>`;
+  $("cliSug").innerHTML = h; $("cliSug").hidden = false; $("cliente").setAttribute("aria-expanded", "true");
+}
+function escolherCliente(c) {
+  $("cliente").value = c[1];
+  sel.clienteCod = c[0]; sel.clienteLivre = false;
+  fecharSug(); mostrarCliente();
+  // processo escolhido de outro cliente deixa de valer
+  const p = procPorCod.get(sel.processoCod);
+  if (p && norm(p[1]) !== norm(c[1])) { $("processoCod").value = ""; $("processo").value = ""; sel.processoCod = ""; }
+  mostrarProcesso();
+}
+function mostrarCliente() {
+  const box = $("cliPicked");
+  if (sel.clienteCod) {
+    const c = CLI.find(x => x[0] === sel.clienteCod);
+    box.className = "picked"; box.hidden = false;
+    box.innerHTML = `✓ Cliente do NAJ · código ${esc(sel.clienteCod)}${c && c[2] ? " · " + esc(c[2]) : ""}<button type="button" id="trocarCli">Trocar</button>`;
+  } else if (sel.clienteLivre && $("cliente").value.trim()) {
+    box.className = "picked free"; box.hidden = false;
+    box.innerHTML = `Nome digitado: o robô vai procurar no NAJ<button type="button" id="trocarCli">Escolher da lista</button>`;
+  } else box.hidden = true;
+  $("cliHint").hidden = !box.hidden || !cadOk;
+}
+$("cliente").addEventListener("input", () => { sel.clienteCod = ""; sel.clienteLivre = false; sugAtiva = -1; mostrarCliente(); abrirSug(); mostrarProcesso(); });
+$("cliente").addEventListener("focus", () => { if (!sel.clienteCod) abrirSug(); });
+$("cliente").addEventListener("keydown", ev => {
+  if ($("cliSug").hidden) return;
+  if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+    ev.preventDefault();
+    sugAtiva = Math.max(0, Math.min(sugItens.length - 1, sugAtiva + (ev.key === "ArrowDown" ? 1 : -1)));
+    abrirSug();
+  } else if (ev.key === "Enter" && sugAtiva >= 0) { ev.preventDefault(); escolherCliente(sugItens[sugAtiva]); }
+  else if (ev.key === "Escape") fecharSug();
+});
+$("cliSug").addEventListener("mousedown", ev => ev.preventDefault());
+$("cliSug").addEventListener("click", ev => {
+  const b = ev.target.closest("button"); if (!b) return;
+  if (b.dataset.livre) { sel.clienteLivre = true; sel.clienteCod = ""; fecharSug(); mostrarCliente(); mostrarProcesso(); }
+  else escolherCliente(sugItens[+b.dataset.cli]);
+});
+$("cliente").addEventListener("blur", () => setTimeout(fecharSug, 150));
+$("cliPicked").addEventListener("click", ev => {
+  if (ev.target.id !== "trocarCli") return;
+  sel.clienteCod = ""; sel.clienteLivre = false; mostrarCliente(); $("cliente").focus(); $("cliente").select(); abrirSug();
+});
+
+function descProc(p) { return `${p[1]} x ${p[2] || "—"}`; }
+function escolherProcesso(p) {
+  $("processoCod").value = p[0]; $("processo").value = p[3] || "";
+  sel.processoCod = p[0];
+  const c = cliPorNome.get(norm(p[1]));
+  if (c) { $("cliente").value = c[1]; sel.clienteCod = c[0]; sel.clienteLivre = false; }
+  else if (!sel.clienteCod) { $("cliente").value = p[1]; sel.clienteLivre = true; }
+  mostrarCliente(); mostrarProcesso();
+}
+function mostrarProcesso() {
+  const cod = $("processoCod").value.trim(), num = dig($("processo").value);
+  const wrap = $("procInfoWrap"), info = $("procInfo"), lista = $("procList");
+  let p = cod ? procPorCod.get(cod) : null;
+  if (!p && !cod && num.length >= 10) p = PROC.find(x => dig(x[3]) === num) || null;
+  wrap.hidden = true; lista.hidden = true;
+  if (p) {
+    sel.processoCod = p[0];
+    if (!cod) $("processoCod").value = p[0];
+    info.className = "procinfo";
+    info.innerHTML = `<b>${esc(descProc(p))}</b><span>Código ${esc(p[0])}${p[3] ? " · " + esc(p[3]) : ""}${p[4] ? " · " + esc(p[4]) : ""}</span>`;
+    wrap.hidden = false;
+    return;
+  }
+  sel.processoCod = cod;
+  if (cadOk && (cod || num.length >= 10)) {
+    info.className = "procinfo warn";
+    info.textContent = cod ? `Código ${cod} não está na lista baixada do NAJ. O robô confere direto no NAJ ao lançar.` : "Número não está na lista baixada do NAJ. O robô procura direto no NAJ ao lançar.";
+    wrap.hidden = false;
+    return;
+  }
+  // sem processo informado: mostra os processos do cliente escolhido
+  const nomeCli = sel.clienteCod ? norm($("cliente").value) : "";
+  const doCliente = nomeCli ? PROC.filter(x => norm(x[1]) === nomeCli) : [];
+  if (doCliente.length) {
+    lista.innerHTML = `<span>Processos deste cliente no NAJ (${doCliente.length}) — toque para vincular</span>` +
+      doCliente.slice(0, 12).map(x => `<button type="button" data-proc="${esc(x[0])}">${esc(x[2] || "Sem parte contrária")}<small>Código ${esc(x[0])}${x[3] ? " · " + esc(x[3]) : ""}${x[4] ? " · " + esc(x[4]) : ""}</small></button>`).join("") +
+      (doCliente.length > 12 ? `<span>Mais ${doCliente.length - 12}: informe o código ou o número acima.</span>` : "");
+    lista.hidden = false;
+  }
+}
+["processoCod", "processo"].forEach(id => $(id).addEventListener("input", () => {
+  if (id === "processoCod") $("processo").value = ""; else $("processoCod").value = "";
+  mostrarProcesso();
+  const p = procPorCod.get(sel.processoCod);
+  if (p) escolherProcesso(p);
+}));
+$("procList").addEventListener("click", ev => { const b = ev.target.closest("[data-proc]"); if (b) escolherProcesso(procPorCod.get(b.dataset.proc)); });
+
+async function carregarCadastros(db) {
+  try {
+    const snap = await db.collection("cadastros").get();
+    CLI = []; PROC = []; let info = null;
+    for (const d of snap.docs) {
+      const x = d.data();
+      if (d.id === "info") info = x;
+      else if (x.tipo === "clientes") CLI.push(...x.itens);
+      else if (x.tipo === "processos") PROC.push(...x.itens);
+    }
+    if (!CLI.length) return;
+    idxCli = CLI.map(c => ({ n: norm(c[1]), d: dig(c[2]), item: c }));
+    CLI.forEach(c => cliPorNome.set(norm(c[1]), c));
+    PROC.forEach(p => procPorCod.set(p[0], p));
+    cadOk = true;
+    if (info) $("syncInfo").textContent = `Cadastros do NAJ: ${info.clientes} clientes e ${info.processos} processos, atualizados em ${new Date(info.atualizadoEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}.`;
+    mostrarCliente(); mostrarProcesso();
+  } catch { /* sem a lista, o campo cliente aceita o nome digitado */ }
+}
+
+// ---------- lançar conversando ----------
+let sample = null;
+const ontem = () => { const d = new Date(); d.setDate(d.getDate() - 1); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const hhmm = m => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+function talkMsg(t, cls) { $("talkMsg").textContent = t; $("talkMsg").className = "talk-msg" + (cls ? " " + cls : ""); }
+$("talkBtn").onclick = async () => {
+  const txt = $("talkTxt").value.trim();
+  if (!txt) { talkMsg("Escreva ou dite o que você fez.", "bad"); return; }
+  $("talkBtn").disabled = true; talkMsg("Lendo o que você contou…");
+  const dias = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+  const prompt = `Você transforma o relato de um advogado em um lançamento de horas no sistema NAJ.
+Hoje é ${dataBR(hoje())} (${dias[new Date().getDay()]}), ontem foi ${dataBR(ontem())}, e agora são ${agora()}.
+
+Relato do advogado:
+"""${txt}"""
+
+Responda só com um objeto JSON neste formato:
+{"cliente": string|null, "processoNumero": string|null, "processoCodigo": string|null, "area": string|null, "tipo": string|null, "descricao": string, "data": "AAAA-MM-DD"|null, "inicio": "HH:MM"|null, "termino": "HH:MM"|null, "duracaoMin": number|null, "disponivelCliente": boolean|null}
+
+Regras:
+- "cliente": o nome do cliente como foi dito; não invente.
+- "processoNumero": número CNJ do processo se foi dito. "processoCodigo": código de cadastro do processo no NAJ se foi dito (ex.: "processo 5027 do NAJ", "código 5027").
+- "area": exatamente uma destas, ou null: ${AREAS.join(" | ")}.
+- "tipo": exatamente um destes, ou null: ${TIPOS.map(t => t[0]).join(" | ")}.
+- "descricao": a atividade escrita como registro profissional curto, em primeira pessoa e no passado (ex.: "Revisei o contrato social e enviei os apontamentos ao cliente.").
+- Horários: se disse início e fim, preencha "inicio" e "termino". Se disse só quanto tempo levou (ex.: "uma hora e meia"), preencha "duracaoMin" e deixe os horários null, a menos que tenha dito quando começou ou terminou.
+- "data": "hoje", "ontem" e dias da semana viram datas reais; se não disse, use null.
+- "disponivelCliente": false só se disse que o cliente não deve ver; senão null.`;
+  try {
+    const r = await sample.json(prompt, { modelTier: "quick" });
+    aplicarConversa(r || {});
+  } catch (e) {
+    const msg = { not_granted: "Para usar esta função, permita que a página use o Claude.", rate_limited: "Muitas tentativas seguidas. Espere um pouco e tente de novo.", invalid_json: "Não consegui entender. Tente contar de outro jeito." }[e && e.code];
+    talkMsg(msg || "Não consegui preencher agora. Tente de novo.", "bad");
+    if (e && ["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"].includes(e.code)) $("talkCard").hidden = true;
+  } finally { $("talkBtn").disabled = false; }
+};
+function aplicarConversa(r) {
+  const avisos = [];
+  if (!editId) limpar();
+  if (r.area && AREAS.includes(r.area)) $("area").value = r.area; else avisos.push("área");
+  const t = TIPOS.find(x => x[0] === r.tipo);
+  if (t) $("tipo" + t[1]).checked = true; else avisos.push("tipo");
+  if (r.descricao) $("descricao").value = r.descricao;
+  $("data").value = /^\d{4}-\d{2}-\d{2}$/.test(r.data || "") ? r.data : hoje();
+  let ini = /^\d{2}:\d{2}$/.test(r.inicio || "") ? r.inicio : "", fim = /^\d{2}:\d{2}$/.test(r.termino || "") ? r.termino : "";
+  const dur = Number(r.duracaoMin) > 0 ? Math.round(Number(r.duracaoMin)) : 0;
+  if (dur && ini && !fim) fim = hhmm(Math.min(min(ini) + dur, 1439));
+  if (dur && !ini) { fim = fim || agora(); ini = hhmm(Math.max(min(fim) - dur, 0)); }
+  if (ini) $("inicio").value = ini; else avisos.push("início");
+  if (fim) $("termino").value = fim; else avisos.push("término");
+  if (r.disponivelCliente === false) $("disp").checked = false;
+  atualizarDur();
+  // processo primeiro: ele já traz o cliente
+  const pc = r.processoCodigo ? dig(r.processoCodigo) : "";
+  const pn = r.processoNumero ? dig(r.processoNumero) : "";
+  const p = (pc && procPorCod.get(pc)) || (pn.length >= 10 && PROC.find(x => dig(x[3]) === pn)) || null;
+  if (p) escolherProcesso(p);
+  else if (pc) { $("processoCod").value = pc; mostrarProcesso(); }
+  else if (r.processoNumero) { $("processo").value = r.processoNumero; mostrarProcesso(); }
+  if (!p && r.cliente) {
+    $("cliente").value = r.cliente;
+    const achados = buscarClientes(r.cliente, 8);
+    if (achados.length === 1) escolherCliente(achados[0]);
+    else { sel.clienteCod = ""; mostrarCliente(); if (cadOk) { avisos.push("cliente"); $("cliente").focus(); abrirSug(); } }
+  } else if (!p) avisos.push("cliente");
+  talkMsg(avisos.length ? `Preenchido. Confira e complete: ${avisos.join(", ")}.` : "Preenchido. Confira os campos e toque em “Enviar para a fila”.", avisos.length ? "" : "ok");
+  if (!avisos.includes("cliente")) $("form").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 // ---------- renderização ----------
 function linha(r, compacto) {
   const st = r.status || "pendente";
   let h = `<div class="row">
     <div class="when">${dataCurta(r.data)} · ${esc(r.inicio)}–${esc(r.termino)}</div>
     <div class="who"><div class="client">${esc(r.clienteNaj || r.cliente)}</div>
-      <div class="meta">${r.processo ? `<span class="mono">${esc(r.processo)}</span> · ` : "Sem processo · "}${esc(r.area)} · ${esc(r.tipo)}${r.disponivelCliente === false ? " · oculto ao cliente" : ""}</div>
+      <div class="meta">${r.processoCod ? `Proc. ${esc(r.processoCod)} · ` : ""}${r.processo ? `${esc(r.processo)} · ` : r.processoCod ? "" : "Sem processo · "}${esc(r.area)} · ${esc(r.tipo)}${r.disponivelCliente === false ? " · oculto ao cliente" : ""}</div>
       ${compacto ? "" : `<div class="desc">${esc(r.descricao)}</div>`}</div>
     <div class="pillcell"><span class="pill ${st}">${STATUS[st] || st}</span></div>
     <div class="dur">${fmtDur(durDe(r))}</div>`;
@@ -519,7 +798,6 @@ function render() {
   $("lgOk").textContent = fmtDur(okHoje); $("lgFila").textContent = fmtDur(filaHoje); $("lgErr").textContent = fmtDur(errHoje);
   $("progSub").textContent = tot ? `Você registrou ${fmtDur(tot)} hoje.` : "Nenhuma hora registrada hoje ainda.";
 
-  $("clientesUsados").innerHTML = [...new Set(rows.map(r => r.clienteNaj || r.cliente).filter(Boolean))].sort().map(c => `<option value="${esc(c)}">`).join("");
 
   const recentes = [...rows].sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || "")).slice(0, 5);
   $("recent").innerHTML = recentes.length ? recentes.map(r => linha(r, true)).join("")
@@ -575,9 +853,14 @@ limpar();
 render();
 try { const v = localStorage.getItem("view"); if (["painel", "novo", "lista"].includes(v)) ir(v); } catch {}
 (async () => {
+  sample = await window.claude?.use?.("sample");
+  $("talkCard").hidden = !sample;
+})();
+(async () => {
   const db = await window.claude?.use?.("db");
   if (!db) { $("offline").hidden = false; return; }
   col = db.collection("lancamentos");
+  carregarCadastros(db);
   col.onSnapshot(snap => { rows = snap.docs.map(d => ({ id: d.id, ...d.data() })); render(); },
     () => { $("offline").hidden = false; });
 })();

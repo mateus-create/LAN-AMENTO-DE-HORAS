@@ -1,6 +1,6 @@
 // Robô de lançamento de atividades no NAJ.
 // Uso: node robo/naj-lancar.js <entrada.json> <saida.json> [--teste] [--prints <pasta>]
-// entrada.json: [{ id, cliente, processo?, area, tipo, descricao, data (AAAA-MM-DD), inicio (HH:MM), termino (HH:MM), disponivelCliente }]
+// entrada.json: [{ id, cliente, clienteCod?, processo?, processoCod?, area, tipo, descricao, data (AAAA-MM-DD), inicio (HH:MM), termino (HH:MM), disponivelCliente }]
 // saida.json:   [{ id, status: "lancado"|"erro"|"teste_ok", mensagem, clienteNaj?, processoNaj?, candidatos?, print? }]
 // Com --teste preenche a tela inteira mas NÃO clica em Gravar.
 // Credenciais: variáveis de ambiente NAJ_URL, NAJ_USUARIO, NAJ_SENHA.
@@ -107,6 +107,41 @@ async function selecionarProcesso(p, e) {
   return { clienteNaj, processoNaj: `${escolhido[1]} x ${escolhido[2]} - ${escolhido[3].replace(/\n/g, ' / ')}` };
 }
 
+// Processo pelo código de cadastro no NAJ: digitado direto no campo "Código do Processo".
+async function processoPorCodigo(p, e) {
+  await p.locator('img[id^=IMMENUINFOPROCESSO]').first().click();
+  await quieto(p);
+  await preencherCampo(p, 'EDCODIGOPROCESSO', String(e.processoCod).trim());
+  const numero = await valor(p, 'EDNUMEROPROCESSO');
+  const contraria = await valor(p, 'EDPARTECONTRARIA');
+  const classe = await valor(p, 'EDCLASSE');
+  if (!numero && !contraria && !classe) {
+    throw new ErroLancamento(`Código de processo ${e.processoCod} não encontrado no NAJ. Confira o código.`);
+  }
+  // com o cliente vazio o NAJ costuma trazer o cliente do processo; se não trouxer, preenchemos
+  if (!(await valor(p, 'EDCLIENTE'))) {
+    if (e.clienteCod) await preencherCampo(p, 'EDCLIENTECOD', String(e.clienteCod));
+    else await selecionarCliente(p, e);
+  }
+  const clienteNaj = await valor(p, 'EDCLIENTE');
+  const clienteCodNaj = await valor(p, 'EDCLIENTECOD');
+  const outroCliente = e.clienteCod
+    ? String(e.clienteCod) !== clienteCodNaj
+    : e.cliente && !norm(clienteNaj).includes(norm(e.cliente)) && !norm(e.cliente).includes(norm(clienteNaj));
+  if (outroCliente) {
+    throw new ErroLancamento(`O processo de código ${e.processoCod} é do cliente "${clienteNaj}", e não de "${e.cliente}". Confira o cliente ou o código do processo.`, [clienteNaj]);
+  }
+  return { clienteNaj, processoNaj: `${clienteNaj} x ${contraria}${numero ? ' - ' + numero : ''}${classe ? ' / ' + classe : ''}` };
+}
+
+// Cliente pelo código de cadastro no NAJ: digitado direto no campo de código do cliente.
+async function clientePorCodigo(p, e) {
+  await preencherCampo(p, 'EDCLIENTECOD', String(e.clienteCod).trim());
+  const clienteNaj = await valor(p, 'EDCLIENTE');
+  if (!clienteNaj) throw new ErroLancamento(`Cliente de código ${e.clienteCod} não encontrado no NAJ. Escolha o cliente de novo na lista.`);
+  return { clienteNaj };
+}
+
 async function pesquisarCliente(p, termo) {
   await p.fill('#TIWEDIT8', termo);
   await p.click('#TIWGRADBUTTON7');
@@ -172,7 +207,12 @@ async function lancar(p, e, teste, pastaPrints) {
   await p.locator('text="Nova Atividade"').first().click();
   await espera(4000);
 
-  const r = e.processo && e.processo.trim() ? await selecionarProcesso(p, e) : await selecionarCliente(p, e);
+  // ordem de preferência: código do processo, número do processo, código do cliente, nome do cliente
+  let r;
+  if (e.processoCod && String(e.processoCod).trim()) r = await processoPorCodigo(p, e);
+  else if (e.processo && e.processo.trim()) r = await selecionarProcesso(p, e);
+  else if (e.clienteCod && String(e.clienteCod).trim()) r = await clientePorCodigo(p, e);
+  else r = await selecionarCliente(p, e);
 
   await p.locator('select[id^=CBAREAJURIDICA]').selectOption({ label: e.area });
   await espera(2000);
