@@ -199,6 +199,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
 .proclist button:hover { border-color: var(--muted) }
 .proclist small { color: var(--muted); font-weight: 500; font-size: .74rem }
 .sync { color: var(--muted); font-size: .76rem }
+.cadstatus { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: .78rem; color: var(--muted); background: var(--sunken); border-radius: 9px; padding: 8px 11px }
+.cadstatus::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none }
+.cadstatus.ok::before { background: var(--ok) } .cadstatus.bad { color: var(--bad); background: var(--bad-soft) } .cadstatus.bad::before { background: var(--bad) }
 
 /* lançar conversando */
 .talk { display: grid; gap: 12px; background: var(--hero); color: var(--hero-ink); border: 0 }
@@ -323,6 +326,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
         <form id="form" class="card" novalidate>
           <div class="editing" id="editing" hidden><span id="editingTxt">Editando lançamento</span><button class="ghost" type="button" id="cancelEdit">Cancelar edição</button></div>
 
+          <div class="cadstatus" id="cadStatus" role="status"><span id="cadTxt">Carregando a lista de clientes e processos do NAJ…</span><button type="button" class="link" id="cadRetry" hidden>Tentar de novo</button></div>
           <div class="fgrid">
             <div class="field combo full">
               <label for="cliente">Cliente</label>
@@ -639,12 +643,23 @@ function mostrarProcesso() {
   if (p) {
     sel.processoCod = p[0];
     if (!cod) $("processoCod").value = p[0];
+    // processo informado antes de escolher o cliente: o cliente vem do processo
+    if (!sel.clienteCod) {
+      const c = cliPorNome.get(norm(p[1]));
+      if (c) { $("cliente").value = c[1]; sel.clienteCod = c[0]; sel.clienteLivre = false; mostrarCliente(); }
+    }
     info.className = "procinfo";
     info.innerHTML = `<b>${esc(descProc(p))}</b><span>Código ${esc(p[0])}${p[3] ? " · " + esc(p[3]) : ""}${p[4] ? " · " + esc(p[4]) : ""}</span>`;
     wrap.hidden = false;
     return;
   }
   sel.processoCod = cod;
+  if (!cadOk && (cod || num.length >= 10)) {
+    info.className = "procinfo warn";
+    info.textContent = "A lista do NAJ ainda não carregou nesta página, então não consigo mostrar o processo agora. Pode enviar assim: o robô confere direto no NAJ ao lançar.";
+    wrap.hidden = false;
+    return;
+  }
   if (cadOk && (cod || num.length >= 10)) {
     info.className = "procinfo warn";
     info.textContent = cod ? `Código ${cod} não está na lista baixada do NAJ. O robô confere direto no NAJ ao lançar.` : "Número não está na lista baixada do NAJ. O robô procura direto no NAJ ao lançar.";
@@ -669,25 +684,50 @@ function mostrarProcesso() {
 }));
 $("procList").addEventListener("click", ev => { const b = ev.target.closest("[data-proc]"); if (b) escolherProcesso(procPorCod.get(b.dataset.proc)); });
 
-async function carregarCadastros(db) {
-  try {
-    const snap = await db.collection("cadastros").get();
-    CLI = []; PROC = []; let info = null;
-    for (const d of snap.docs) {
-      const x = d.data();
-      if (d.id === "info") info = x;
-      else if (x.tipo === "clientes") CLI.push(...x.itens);
-      else if (x.tipo === "processos") PROC.push(...x.itens);
-    }
-    if (!CLI.length) return;
-    idxCli = CLI.map(c => ({ n: norm(c[1]), d: dig(c[2]), item: c }));
-    CLI.forEach(c => cliPorNome.set(norm(c[1]), c));
-    PROC.forEach(p => procPorCod.set(p[0], p));
-    cadOk = true;
-    if (info) $("syncInfo").textContent = `Cadastros do NAJ: ${info.clientes} clientes e ${info.processos} processos, atualizados em ${new Date(info.atualizadoEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}.`;
-    mostrarCliente(); mostrarProcesso();
-  } catch { /* sem a lista, o campo cliente aceita o nome digitado */ }
+// Lê a lista documento por documento (cada um até ~200 KB) e recarrega quando o robô grava uma lista nova.
+let cadDb = null, cadVersao = "";
+function cadStatus(txt, cls) {
+  $("cadTxt").textContent = txt;
+  $("cadStatus").className = "cadstatus" + (cls ? " " + cls : "");
+  $("cadRetry").hidden = cls !== "bad";
 }
+async function carregarCadastros(info) {
+  if (!info || !Array.isArray(info.documentos)) { cadStatus("A lista do NAJ ainda não foi carregada. Digite o nome do cliente: o robô procura no NAJ.", ""); return; }
+  if (info.atualizadoEm === cadVersao && cadOk) return;
+  cadStatus("Carregando a lista de clientes e processos do NAJ…", "");
+  try {
+    const cli = [], proc = [];
+    for (const id of info.documentos) {
+      let d;
+      try { d = await cadDb.doc("cadastros/" + id).get(); }
+      catch (e) { await new Promise(r => setTimeout(r, 800 + Math.random() * 800)); d = await cadDb.doc("cadastros/" + id).get(); }
+      const x = d.exists ? d.data() : null;
+      if (!x) throw { code: "faltando", message: id };
+      (x.tipo === "clientes" ? cli : proc).push(...x.itens);
+    }
+    CLI = cli; PROC = proc;
+    idxCli = CLI.map(c => ({ n: norm(c[1]), d: dig(c[2]), item: c }));
+    cliPorNome.clear(); CLI.forEach(c => cliPorNome.set(norm(c[1]), c));
+    procPorCod.clear(); PROC.forEach(p => procPorCod.set(p[0], p));
+    cadOk = true; cadVersao = info.atualizadoEm;
+    const quando = new Date(info.atualizadoEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    cadStatus(`Lista do NAJ: ${CLI.length.toLocaleString("pt-BR")} clientes e ${PROC.length.toLocaleString("pt-BR")} processos · atualizada em ${quando}`, "ok");
+    $("syncInfo").textContent = `Cadastros do NAJ atualizados em ${quando}.`;
+    mostrarCliente(); mostrarProcesso();
+    if (document.activeElement === $("cliente")) abrirSug();
+  } catch (e) {
+    cadStatus(`Não consegui carregar a lista do NAJ${e && e.code ? " (" + e.code + ")" : ""}. Você pode digitar o nome do cliente: o robô procura no NAJ.`, "bad");
+  }
+}
+function vigiarCadastros(db) {
+  cadDb = db;
+  db.doc("cadastros/info").onSnapshot(s => carregarCadastros(s.exists ? s.data() : null),
+    e => cadStatus(`Não consegui acompanhar a lista do NAJ${e && e.code ? " (" + e.code + ")" : ""}.`, "bad"));
+}
+$("cadRetry").onclick = async () => {
+  try { const s = await cadDb.doc("cadastros/info").get(); cadVersao = ""; carregarCadastros(s.exists ? s.data() : null); }
+  catch (e) { cadStatus(`Ainda não consegui carregar a lista do NAJ${e && e.code ? " (" + e.code + ")" : ""}.`, "bad"); }
+};
 
 // ---------- lançar conversando ----------
 let sample = null;
@@ -858,9 +898,9 @@ try { const v = localStorage.getItem("view"); if (["painel", "novo", "lista"].in
 })();
 (async () => {
   const db = await window.claude?.use?.("db");
-  if (!db) { $("offline").hidden = false; return; }
+  if (!db) { $("offline").hidden = false; cadStatus("Sem conexão com o armazenamento: a lista do NAJ não pode ser carregada aqui.", "bad"); return; }
   col = db.collection("lancamentos");
-  carregarCadastros(db);
+  vigiarCadastros(db);
   col.onSnapshot(snap => { rows = snap.docs.map(d => ({ id: d.id, ...d.data() })); render(); },
     () => { $("offline").hidden = false; });
 })();
