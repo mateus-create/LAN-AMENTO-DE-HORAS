@@ -215,6 +215,52 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
 .talk-msg { font-size: .8rem; color: var(--hero-muted) }
 .talk-msg.bad { color: #ff8a80 } .talk-msg.ok { color: var(--ring) }
 
+.dictate { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .78rem; color: var(--hero-muted); background: #20242c; border-radius: 10px; padding: 9px 12px }
+.dictate > b { width: 100%; color: var(--hero-ink); font-weight: 600 }
+.dictate span b { color: var(--hero-ink) }
+.talk .ghost { background: transparent; color: var(--hero-ink); border-color: #3a3f49 }
+
+/* timesheet */
+.timer { background: var(--hero); color: var(--hero-ink); border-radius: 18px; padding: 22px; display: grid; gap: 18px }
+.timer .hint { color: var(--hero-muted) }
+.timer input, .timer select, .timer textarea { background: #20242c; color: var(--hero-ink); border-color: #2f3540 }
+.timer input::placeholder, .timer textarea::placeholder { color: #7d8696 }
+.timer .field > label { color: var(--hero-ink) }
+.timer .sug { color: var(--ink) }
+.clockface { font: 800 clamp(2.8rem, 11vw, 4.6rem)/1 var(--sans); letter-spacing: -.03em; font-variant-numeric: tabular-nums; text-align: center }
+.clockface.paused { color: var(--hero-muted) }
+.timer-who { text-align: center; display: grid; gap: 2px }
+.timer-who b { font-size: 1.05rem }
+.timer-who span { color: var(--hero-muted); font-size: .84rem }
+.timer-btns { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap }
+.round { width: 76px; height: 76px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center; font: 700 .74rem var(--sans); gap: 2px; padding: 8px }
+.round svg { width: 26px; height: 26px }
+.round.go { background: var(--ring); color: #062019; width: 92px; height: 92px }
+.round.pause { background: #2a2f38; color: var(--hero-ink) }
+.round.stop { background: #ff6b5e; color: #2a0805 }
+.round:disabled { opacity: .45; cursor: not-allowed }
+.tsgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px }
+.recent { display: flex; gap: 8px; flex-wrap: wrap }
+.recent button { border: 1px solid #3a3f49; background: transparent; color: var(--hero-ink); border-radius: 999px; padding: 7px 12px; font: 600 .78rem var(--sans); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; max-width: 100% }
+.recent button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.recent button::before { content: "▶"; font-size: .6rem; color: var(--ring) }
+.stopsheet { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 14px }
+.stopsheet .total { font: 800 1.6rem var(--sans) }
+.wk { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px }
+.wk div { background: var(--sunken); border-radius: 10px; padding: 8px 4px; text-align: center; display: grid; gap: 2px }
+.wk small { color: var(--muted); font-size: .68rem; font-weight: 700; text-transform: uppercase }
+.wk b { font-size: .86rem }
+.wk .today { outline: 2px solid var(--ink) }
+.byclient { display: grid; gap: 8px }
+.byclient div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; font-size: .84rem }
+.byclient i { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--sunken); overflow: hidden; display: block }
+.byclient i::after { content: ""; display: block; height: 100%; width: var(--w); background: var(--ink); border-radius: 3px }
+.pill.ts { background: var(--sunken); color: var(--muted) }
+.live-b { background: var(--ring) !important; color: #062019 !important }
+#tIdle > *, #tRun > *, .timer > * { min-width: 0 }
+.timer select { min-width: 0; max-width: 100%; text-overflow: ellipsis }
+@media (max-width: 860px) { .tsgrid { grid-template-columns: minmax(0, 1fr) } .wk { gap: 4px } .wk b { font-size: .76rem } }
+
 .offline { background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 12px; font-size: .85rem; font-weight: 600 }
 .toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: 12px; font-size: .88rem; font-weight: 600; z-index: 30; max-width: calc(100% - 32px); box-shadow: 0 8px 24px rgb(0 0 0 / .2) }
 
@@ -223,7 +269,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
   .shell { grid-template-columns: 1fr }
   .side { position: fixed; z-index: 20; top: auto; bottom: 0; left: 0; right: 0; height: auto; padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px)); flex-direction: row; gap: 0 }
   .side .logo, .side-foot { display: none }
-  .nav { grid-template-columns: repeat(3, 1fr); width: 100%; gap: 2px }
+  .nav { grid-template-columns: repeat(4, 1fr); width: 100%; gap: 2px }
   .nav button { flex-direction: column; gap: 3px; font-size: .7rem; padding: 7px 4px; justify-content: center; align-items: center; position: relative; text-align: center }
   .nav .badge { position: absolute; top: 2px; right: calc(50% - 22px); margin: 0; font-size: .62rem; padding: 0 5px }
   main { padding-inline: 16px; padding-block: 16px 100px; gap: 16px }
@@ -256,6 +302,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
       <button type="button" data-view="novo">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
         <span>Novo lançamento</span></button>
+      <button type="button" data-view="ts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2h5M12 2v3"/></svg>
+        <span>Timesheet</span><span class="badge live-b" id="navTs" hidden>●</span></button>
       <button type="button" data-view="lista">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg>
         <span>Lançamentos</span><span class="badge" id="navBadge" hidden></span></button>
@@ -314,13 +363,15 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
     <section id="v-novo" class="view" hidden>
       <div style="display:grid;gap:18px">
         <div class="page-head"><div><div class="crumb">Atividades / Nova</div><h1 id="formTitle">Novo lançamento</h1></div></div>
-        <div class="card talk" id="talkCard" hidden>
+        <div class="card talk" id="talkCard">
           <div class="talk-head">
             <span class="talk-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span>
-            <div><h2>Lançar conversando</h2><span class="hint">Conte o que você fez com suas palavras. No celular, toque no microfone do teclado para falar em vez de digitar. O Claude preenche o formulário abaixo para você conferir.</span></div>
+            <div><h2>Lançar conversando</h2><span class="hint">Fale o que você fez e o Claude preenche o formulário abaixo para você conferir.</span></div>
           </div>
+          <div class="dictate"><b>Como falar em vez de digitar:</b> toque na caixa abaixo e use o ditado do seu aparelho.
+            <span><b>Celular:</b> toque no 🎤 do teclado.</span><span><b>Windows:</b> tecla Windows + H.</span><span><b>Mac:</b> aperte Fn (ou 🌐) duas vezes.</span></div>
           <textarea id="talkTxt" placeholder="Ex.: hoje das 9h às 10h30 revisei o contrato social da Esquadrias Schneider, cível, contratos fixos"></textarea>
-          <div class="talk-foot"><span class="talk-msg" id="talkMsg" role="status"></span><button class="btn light" type="button" id="talkBtn">Preencher o formulário</button></div>
+          <div class="talk-foot"><span class="talk-msg" id="talkMsg" role="status"></span><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" type="button" id="talkPerm" hidden>Ativar permissão</button><button class="btn light" type="button" id="talkBtn">Preencher o formulário</button></span></div>
         </div>
 
         <form id="form" class="card" novalidate>
@@ -388,6 +439,83 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
             <button class="btn" type="submit" id="salvar">Enviar para a fila</button>
           </div>
         </form>
+      </div>
+    </section>
+
+    <!-- TIMESHEET -->
+    <section id="v-ts" class="view" hidden>
+      <div style="display:grid;gap:18px">
+        <div class="page-head"><div><div class="crumb">Controle de tempo</div><h1>Timesheet</h1></div></div>
+
+        <div class="timer" id="timerCard">
+          <!-- parado -->
+          <div id="tIdle" style="display:grid;gap:14px">
+            <div class="tsgrid">
+              <div class="field combo">
+                <label for="tsCliente">Cliente</label>
+                <input id="tsCliente" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tsSug" placeholder="Digite parte do nome">
+                <div class="sug" id="tsSug" role="listbox" hidden></div>
+              </div>
+              <div class="field">
+                <label for="tsProc">Processo <span class="hint">(opcional)</span></label>
+                <select id="tsProc"><option value="">Sem processo</option></select>
+              </div>
+              <div class="field">
+                <label for="tsProcCod">ou código do processo no NAJ</label>
+                <input id="tsProcCod" inputmode="numeric" autocomplete="off" placeholder="Ex.: 5027">
+              </div>
+              <div class="field">
+                <label for="tsDesc">O que vai fazer <span class="hint">(opcional)</span></label>
+                <input id="tsDesc" autocomplete="off" placeholder="Ex.: análise do contrato">
+              </div>
+            </div>
+            <div class="hint" id="tsInfo"></div>
+            <div class="timer-btns"><button class="round go" type="button" id="tStart" aria-label="Iniciar cronômetro"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Iniciar</button></div>
+            <div id="tRecentWrap" hidden><div class="hint" style="margin-bottom:8px">Recomeçar com um toque:</div><div class="recent" id="tRecent"></div></div>
+          </div>
+          <!-- rodando ou pausado -->
+          <div id="tRun" hidden style="display:grid;gap:16px">
+            <div class="timer-who"><b id="tWho"></b><span id="tWhoProc"></span></div>
+            <div class="clockface" id="tClock">00:00:00</div>
+            <div class="timer-btns">
+              <button class="round pause" type="button" id="tPause"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg><span>Pausar</span></button>
+              <button class="round stop" type="button" id="tStop"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Parar</button>
+            </div>
+            <div class="field"><label for="tRunDesc">O que está fazendo</label><input id="tRunDesc" autocomplete="off" placeholder="Pode escrever agora ou ao parar"></div>
+            <div class="hint" style="text-align:center" id="tSince"></div>
+          </div>
+        </div>
+
+        <!-- ao parar -->
+        <div class="stopsheet" id="tSheet" hidden>
+          <div class="card-head" style="margin:0"><h2 id="tSheetTitle">Tempo registrado</h2><span class="total" id="tSheetTotal">00:00</span></div>
+          <div class="hint" id="tSheetWho"></div>
+          <div class="field"><label for="tsFimDesc">Descrição da atividade</label><textarea id="tsFimDesc" placeholder="O que foi feito"></textarea></div>
+          <div class="tsgrid">
+            <div class="field"><label for="tsArea">Área jurídica</label><select id="tsArea"></select></div>
+            <div class="field"><label for="tsTipo">Tipo de atividade</label><select id="tsTipo"></select></div>
+          </div>
+          <div class="hint">A área e o tipo só são necessários para enviar ao NAJ.</div>
+          <div class="err" id="tSheetErr" hidden></div>
+          <div class="form-foot">
+            <button class="ghost danger" type="button" id="tDiscard">Descartar</button>
+            <button class="ghost" type="button" id="tSaveOnly">Salvar no timesheet</button>
+            <button class="btn" type="button" id="tSaveSend">Salvar e enviar ao NAJ</button>
+          </div>
+        </div>
+
+        <div class="grid2">
+          <div class="card">
+            <div class="card-head"><h2>Esta semana</h2><b id="tsWeekTotal">00:00</b></div>
+            <div class="wk" id="tsWeek"></div>
+            <div class="card-head" style="margin:18px 0 10px"><h2>Por cliente</h2></div>
+            <div class="byclient" id="tsByClient"><span class="hint">Nada registrado nesta semana.</span></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>Registros</h2></div>
+            <div class="rows" id="tsList"><div class="empty"><b>Nenhum registro ainda.</b><span>Escolha o cliente e toque em Iniciar.</span></div></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -713,7 +841,7 @@ async function carregarCadastros(info) {
     const quando = new Date(info.atualizadoEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
     cadStatus(`Lista do NAJ: ${CLI.length.toLocaleString("pt-BR")} clientes e ${PROC.length.toLocaleString("pt-BR")} processos · atualizada em ${quando}`, "ok");
     $("syncInfo").textContent = `Cadastros do NAJ atualizados em ${quando}.`;
-    mostrarCliente(); mostrarProcesso();
+    mostrarCliente(); mostrarProcesso(); tsMontarProc(); tsInfo();
     if (document.activeElement === $("cliente")) abrirSug();
   } catch (e) {
     cadStatus(`Não consegui carregar a lista do NAJ${e && e.code ? " (" + e.code + ")" : ""}. Você pode digitar o nome do cliente: o robô procura no NAJ.`, "bad");
@@ -737,7 +865,8 @@ function talkMsg(t, cls) { $("talkMsg").textContent = t; $("talkMsg").className 
 $("talkBtn").onclick = async () => {
   const txt = $("talkTxt").value.trim();
   if (!txt) { talkMsg("Escreva ou dite o que você fez.", "bad"); return; }
-  $("talkBtn").disabled = true; talkMsg("Lendo o que você contou…");
+  if (!sample) { talkMsg("Esta função só funciona com a página aberta no claude.ai ou no app do Claude, com sua conta.", "bad"); return; }
+  $("talkBtn").disabled = true; talkMsg("Lendo o que você contou… (na primeira vez, o Claude pede sua permissão)");
   const dias = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
   const prompt = `Você transforma o relato de um advogado em um lançamento de horas no sistema NAJ.
 Hoje é ${dataBR(hoje())} (${dias[new Date().getDay()]}), ontem foi ${dataBR(ontem())}, e agora são ${agora()}.
@@ -762,8 +891,8 @@ Regras:
     aplicarConversa(r || {});
   } catch (e) {
     const msg = { not_granted: "Para usar esta função, permita que a página use o Claude.", rate_limited: "Muitas tentativas seguidas. Espere um pouco e tente de novo.", invalid_json: "Não consegui entender. Tente contar de outro jeito." }[e && e.code];
-    talkMsg(msg || "Não consegui preencher agora. Tente de novo.", "bad");
-    if (e && ["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"].includes(e.code)) $("talkCard").hidden = true;
+    talkMsg((msg || "Não consegui preencher agora. Tente de novo.") + (e && e.code ? ` (código: ${e.code})` : ""), "bad");
+    if (e && e.code === "not_granted") $("talkPerm").hidden = false;
   } finally { $("talkBtn").disabled = false; }
 };
 function aplicarConversa(r) {
@@ -797,6 +926,235 @@ function aplicarConversa(r) {
   } else if (!p) avisos.push("cliente");
   talkMsg(avisos.length ? `Preenchido. Confira e complete: ${avisos.join(", ")}.` : "Preenchido. Confira os campos e toque em “Enviar para a fila”.", avisos.length ? "" : "ok");
   if (!avisos.includes("cliente")) $("form").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// ---------- timesheet / cronômetro ----------
+// timesheet/ativo guarda o cronômetro em andamento (vale em qualquer aparelho); timesheet_registros guarda cada período encerrado.
+let tsCol = null, tsAtivoRef = null, ativo = null, registros = [], tsSel = { cliente: "", clienteCod: "", processoCod: "" }, parado = null, tick = null;
+const fmtHMS = ms => { const t = Math.max(0, Math.floor(ms / 1000)); return [Math.floor(t / 3600), Math.floor(t % 3600 / 60), t % 60].map(n => String(n).padStart(2, "0")).join(":"); };
+const decorrido = a => (a.acumuladoMs || 0) + (a.rodandoDesde ? Date.now() - new Date(a.rodandoDesde).getTime() : 0);
+const hhmmDe = d => d.toTimeString().slice(0, 5);
+const isoDia = d => { const x = new Date(d); x.setMinutes(x.getMinutes() - x.getTimezoneOffset()); return x.toISOString().slice(0, 10); };
+
+$("tsArea").innerHTML = '<option value="">Selecione…</option>' + AREAS.map(a => `<option>${a}</option>`).join("");
+$("tsTipo").innerHTML = '<option value="">Selecione…</option>' + TIPOS.map(t => `<option>${t[0]}</option>`).join("");
+
+// escolha de cliente e processo no cronômetro
+let tsSugItens = [];
+function tsProcessosDo(nome) { return nome ? PROC.filter(x => norm(x[1]) === norm(nome)) : []; }
+function tsMontarProc() {
+  const lista = tsProcessosDo(tsSel.cliente);
+  $("tsProc").innerHTML = '<option value="">Sem processo</option>' + lista.map(x => `<option value="${esc(x[0])}">${esc(x[0])} · ${esc(x[2] || "—")}${x[3] ? " · " + esc(x[3]) : ""}</option>`).join("");
+  $("tsProc").value = lista.some(x => x[0] === tsSel.processoCod) ? tsSel.processoCod : "";
+}
+function tsInfo() {
+  const p = procPorCod.get(tsSel.processoCod);
+  $("tsInfo").textContent = tsSel.cliente
+    ? `${tsSel.clienteCod ? "✓ " : ""}${tsSel.cliente}${p ? " · " + descProc(p) + (p[3] ? " · " + p[3] : "") : tsSel.processoCod ? " · processo " + tsSel.processoCod : ""}`
+    : (cadOk ? "" : "A lista do NAJ não carregou: digite o nome do cliente.");
+}
+function tsEscolherCliente(c) {
+  $("tsCliente").value = c[1]; tsSel = { cliente: c[1], clienteCod: c[0], processoCod: "" };
+  $("tsSug").hidden = true; $("tsProcCod").value = ""; tsMontarProc(); tsInfo();
+}
+$("tsCliente").addEventListener("input", () => {
+  tsSel = { cliente: $("tsCliente").value.trim(), clienteCod: "", processoCod: "" };
+  tsMontarProc(); tsInfo();
+  const q = $("tsCliente").value;
+  if (!cadOk || !q.trim()) { $("tsSug").hidden = true; return; }
+  tsSugItens = buscarClientes(q);
+  $("tsSug").innerHTML = tsSugItens.length ? tsSugItens.map((c, i) => `<button type="button" data-i="${i}">${esc(c[1])}<small>Código ${esc(c[0])}${c[2] ? " · " + esc(c[2]) : ""}</small></button>`).join("") : `<div class="none">Nenhum cliente do NAJ com “${esc(q)}”. Pode iniciar mesmo assim.</div>`;
+  $("tsSug").hidden = false;
+});
+$("tsSug").addEventListener("mousedown", ev => ev.preventDefault());
+$("tsSug").addEventListener("click", ev => { const b = ev.target.closest("[data-i]"); if (b) tsEscolherCliente(tsSugItens[+b.dataset.i]); });
+$("tsCliente").addEventListener("blur", () => setTimeout(() => $("tsSug").hidden = true, 150));
+$("tsProc").addEventListener("change", () => { tsSel.processoCod = $("tsProc").value; $("tsProcCod").value = ""; tsInfo(); });
+$("tsProcCod").addEventListener("input", () => {
+  const cod = $("tsProcCod").value.trim(), p = procPorCod.get(cod);
+  if (p) { const c = cliPorNome.get(norm(p[1])); $("tsCliente").value = c ? c[1] : p[1]; tsSel = { cliente: c ? c[1] : p[1], clienteCod: c ? c[0] : "", processoCod: cod }; tsMontarProc(); }
+  else tsSel.processoCod = cod;
+  tsInfo();
+});
+
+function tsResumoProc(a) { const p = procPorCod.get(a.processoCod); return p ? `Processo ${p[0]} · ${p[2] || "—"}${p[3] ? " · " + p[3] : ""}` : a.processoCod ? `Processo ${a.processoCod}` : "Sem processo"; }
+
+async function tsIniciar(base) {
+  if (!tsAtivoRef) { toast("Sem conexão: não foi possível iniciar."); return; }
+  if (!base.cliente) { toast("Escolha o cliente antes de iniciar."); $("tsCliente").focus(); return; }
+  const agoraISO = new Date().toISOString();
+  try {
+    await tsAtivoRef.set({ estado: "rodando", cliente: base.cliente, clienteCod: base.clienteCod || "", processoCod: base.processoCod || "", descricao: base.descricao || "", inicio: agoraISO, rodandoDesde: agoraISO, acumuladoMs: 0, segmentos: [] });
+  } catch { toast("Não consegui iniciar. Tente de novo."); }
+}
+$("tStart").onclick = () => tsIniciar({ ...tsSel, descricao: $("tsDesc").value.trim() });
+
+$("tPause").onclick = async () => {
+  if (!ativo) return;
+  const agoraISO = new Date().toISOString();
+  try {
+    if (ativo.estado === "rodando") {
+      await tsAtivoRef.update({ estado: "pausado", acumuladoMs: decorrido(ativo), rodandoDesde: null, segmentos: [...(ativo.segmentos || []), [ativo.rodandoDesde, agoraISO]] });
+    } else {
+      await tsAtivoRef.update({ estado: "rodando", rodandoDesde: agoraISO });
+    }
+  } catch { toast("Não consegui salvar. Tente de novo."); }
+};
+let descT;
+$("tRunDesc").addEventListener("input", () => { clearTimeout(descT); descT = setTimeout(() => tsAtivoRef && tsAtivoRef.update({ descricao: $("tRunDesc").value }).catch(() => {}), 800); });
+
+$("tStop").onclick = async () => {
+  if (!ativo) return;
+  const fim = new Date();
+  const segs = [...(ativo.segmentos || [])];
+  if (ativo.estado === "rodando") segs.push([ativo.rodandoDesde, fim.toISOString()]);
+  parado = { ...ativo, descricao: $("tRunDesc").value.trim() || ativo.descricao || "", totalMs: decorrido(ativo), fim: fim.toISOString(), segmentos: segs };
+  try { await tsAtivoRef.delete(); } catch { toast("Não consegui parar. Tente de novo."); parado = null; return; }
+  abrirFolha();
+};
+
+function abrirFolha(reg) {
+  // reg: registro já salvo que vai ser enviado ao NAJ; sem reg, é o período que acabou de parar
+  const r = reg || parado;
+  $("tSheet").dataset.reg = reg ? reg.id : "";
+  $("tSheetTitle").textContent = reg ? "Enviar ao NAJ" : "Tempo registrado";
+  $("tSheetTotal").textContent = fmtHMS(reg ? reg.segundos * 1000 : r.totalMs).slice(0, 5);
+  $("tSheetWho").textContent = `${r.cliente} · ${tsResumoProc(r)}`;
+  $("tsFimDesc").value = r.descricao || "";
+  $("tsArea").value = r.area || ""; $("tsTipo").value = r.tipo || "";
+  $("tSaveOnly").hidden = !!reg; $("tDiscard").hidden = !!reg;
+  $("tSheetErr").hidden = true; $("tSheet").hidden = false;
+  $("tSheet").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+function fecharFolha() { $("tSheet").hidden = true; parado = null; }
+
+function dadosDoPeriodo() {
+  const ini = new Date(parado.inicio), seg = Math.round(parado.totalMs / 1000);
+  return {
+    cliente: parado.cliente, clienteCod: parado.clienteCod || "", processoCod: parado.processoCod || "",
+    descricao: $("tsFimDesc").value.trim(), area: $("tsArea").value, tipo: $("tsTipo").value,
+    data: isoDia(ini), inicio: hhmmDe(ini), termino: hhmmDe(new Date(parado.fim)),
+    segundos: seg, segmentos: parado.segmentos.map(([a, b]) => ({ de: a, ate: b })), criadoEm: new Date().toISOString(), lancamentoId: "",
+  };
+}
+// O NAJ calcula o tempo pelo início e término: o término enviado é o início mais o tempo trabalhado, sem as pausas.
+async function enviarAoNaj(reg) {
+  const ini = min(reg.inicio), dur = Math.max(1, Math.round(reg.segundos / 60));
+  const fimMin = Math.min(ini + dur, 23 * 60 + 59);
+  const agoraISO = new Date().toISOString();
+  const doc = await col.add({
+    cliente: reg.cliente, clienteCod: reg.clienteCod || "", processo: (procPorCod.get(reg.processoCod) || [])[3] || "", processoCod: reg.processoCod || "",
+    area: reg.area, tipo: reg.tipo, descricao: reg.descricao, data: reg.data, inicio: reg.inicio, termino: hhmm(fimMin),
+    disponivelCliente: true, status: "pendente", mensagem: "", candidatos: [], criadoEm: agoraISO, atualizadoEm: agoraISO, origem: "timesheet",
+  });
+  return doc.id;
+}
+function validarFolha(enviar) {
+  if (!$("tsFimDesc").value.trim() && enviar) return "Escreva a descrição da atividade.";
+  if (enviar && !$("tsArea").value) return "Escolha a área jurídica para enviar ao NAJ.";
+  if (enviar && !$("tsTipo").value) return "Escolha o tipo de atividade para enviar ao NAJ.";
+  return "";
+}
+async function salvarFolha(enviar) {
+  const msg = validarFolha(enviar);
+  $("tSheetErr").hidden = !msg; $("tSheetErr").textContent = msg;
+  if (msg) return;
+  const regId = $("tSheet").dataset.reg;
+  try {
+    if (regId) {
+      const reg = { ...registros.find(x => x.id === regId), descricao: $("tsFimDesc").value.trim(), area: $("tsArea").value, tipo: $("tsTipo").value };
+      const lid = await enviarAoNaj(reg);
+      await tsCol.doc(regId).update({ descricao: reg.descricao, area: reg.area, tipo: reg.tipo, lancamentoId: lid });
+    } else {
+      const reg = dadosDoPeriodo();
+      const ref = tsCol.doc();
+      await ref.set(reg);
+      if (enviar) { const lid = await enviarAoNaj(reg); await ref.update({ lancamentoId: lid }); }
+    }
+    toast(enviar ? "Salvo e enviado para a fila do NAJ." : "Salvo no timesheet.");
+    fecharFolha();
+  } catch { toast("Não consegui salvar. Tente de novo."); }
+}
+$("tSaveOnly").onclick = () => salvarFolha(false);
+$("tSaveSend").onclick = () => salvarFolha(true);
+$("tDiscard").onclick = () => { if ($("tDiscard").dataset.ok) { delete $("tDiscard").dataset.ok; $("tDiscard").textContent = "Descartar"; fecharFolha(); toast("Período descartado."); } else { $("tDiscard").dataset.ok = "1"; $("tDiscard").textContent = "Toque de novo para descartar"; } };
+
+function renderTimer() {
+  const on = !!ativo;
+  $("tIdle").hidden = on; $("tRun").hidden = !on;
+  $("navTs").hidden = !on;
+  clearInterval(tick);
+  if (!on) { renderRecentes(); return; }
+  $("tWho").textContent = ativo.cliente;
+  $("tWhoProc").textContent = tsResumoProc(ativo);
+  if (document.activeElement !== $("tRunDesc")) $("tRunDesc").value = ativo.descricao || "";
+  const pausado = ativo.estado === "pausado";
+  $("tPause").querySelector("span").textContent = pausado ? "Retomar" : "Pausar";
+  $("tPause").querySelector("svg").innerHTML = pausado ? '<path d="M8 5v14l11-7z"/>' : '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>';
+  $("tClock").classList.toggle("paused", pausado);
+  $("tSince").textContent = `Começou às ${hhmmDe(new Date(ativo.inicio))}${pausado ? " · pausado" : ""}`;
+  const pinta = () => { $("tClock").textContent = fmtHMS(decorrido(ativo)); };
+  pinta();
+  if (!pausado) tick = setInterval(pinta, 1000);
+}
+function renderRecentes() {
+  const vistos = new Set(), lista = [];
+  for (const r of [...registros].sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""))) {
+    const k = (r.clienteCod || r.cliente) + "|" + (r.processoCod || "");
+    if (vistos.has(k)) continue; vistos.add(k); lista.push(r);
+    if (lista.length === 6) break;
+  }
+  $("tRecentWrap").hidden = !lista.length;
+  $("tRecent").innerHTML = lista.map((r, i) => `<button type="button" data-rec="${i}"><span>${esc(r.cliente)}${r.processoCod ? " · " + esc(r.processoCod) : ""}</span></button>`).join("");
+  $("tRecent").onclick = ev => { const b = ev.target.closest("[data-rec]"); if (b) { const r = lista[+b.dataset.rec]; tsIniciar({ cliente: r.cliente, clienteCod: r.clienteCod, processoCod: r.processoCod, descricao: "" }); } };
+}
+function renderRegistros() {
+  const ini = inicioSemana(), dias = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"];
+  const semana = registros.filter(r => r.data >= ini);
+  let html = "";
+  const base = new Date(ini + "T12:00:00");
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(base); d.setDate(base.getDate() + i); const iso = isoDia(d);
+    const seg = semana.filter(r => r.data === iso).reduce((a, r) => a + (r.segundos || 0), 0);
+    html += `<div class="${iso === hoje() ? "today" : ""}"><small>${dias[i]}</small><b>${seg ? fmtHMS(seg * 1000).slice(0, 5) : "–"}</b></div>`;
+  }
+  $("tsWeek").innerHTML = html;
+  const total = semana.reduce((a, r) => a + (r.segundos || 0), 0);
+  $("tsWeekTotal").textContent = fmtHMS(total * 1000).slice(0, 5);
+  const porCli = {};
+  semana.forEach(r => porCli[r.cliente] = (porCli[r.cliente] || 0) + (r.segundos || 0));
+  const top = Object.entries(porCli).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  $("tsByClient").innerHTML = top.length ? top.map(([c, sgs]) => `<div><span>${esc(c)}</span><b>${fmtHMS(sgs * 1000).slice(0, 5)}</b><i style="--w:${Math.round(sgs / top[0][1] * 100)}%"></i></div>`).join("") : '<span class="hint">Nada registrado nesta semana.</span>';
+
+  const lista = [...registros].sort((a, b) => (b.data + b.inicio).localeCompare(a.data + a.inicio)).slice(0, 40);
+  if (!lista.length) { $("tsList").innerHTML = '<div class="empty"><b>Nenhum registro ainda.</b><span>Escolha o cliente e toque em Iniciar.</span></div>'; return; }
+  $("tsList").innerHTML = lista.map(r => {
+    const l = r.lancamentoId ? rows.find(x => x.id === r.lancamentoId) : null;
+    const st = l ? `<span class="pill ${l.status}">${STATUS[l.status] || l.status}</span>` : r.lancamentoId ? '<span class="pill lancado">Enviado ao NAJ</span>' : '<span class="pill ts">Só no timesheet</span>';
+    return `<div class="row">
+      <div class="when">${dataCurta(r.data)} · ${esc(r.inicio)}–${esc(r.termino)}</div>
+      <div class="who"><div class="client">${esc(r.cliente)}</div><div class="meta">${esc(tsResumoProc(r))}</div>${r.descricao ? `<div class="desc">${esc(r.descricao)}</div>` : ""}</div>
+      <div class="pillcell">${st}</div>
+      <div class="dur">${fmtHMS((r.segundos || 0) * 1000).slice(0, 5)}</div>
+      <div class="acts">${r.lancamentoId ? "" : confirmDel === "ts:" + r.id
+        ? `<span class="confirm">Apagar? <button class="ghost danger" type="button" data-tsdelok="${r.id}">Apagar</button><button class="ghost" type="button" data-tsdelno="1">Manter</button></span>`
+        : `<button class="ghost" type="button" data-tsdel="${r.id}">Apagar</button><button class="ghost" type="button" data-tssend="${r.id}">Enviar ao NAJ</button>`}</div>
+    </div>`;
+  }).join("");
+}
+$("tsList").addEventListener("click", async ev => {
+  const b = ev.target.closest("button"); if (!b) return;
+  if (b.dataset.tssend) abrirFolha(registros.find(x => x.id === b.dataset.tssend));
+  else if (b.dataset.tsdel) { confirmDel = "ts:" + b.dataset.tsdel; renderRegistros(); }
+  else if (b.dataset.tsdelno) { confirmDel = null; renderRegistros(); }
+  else if (b.dataset.tsdelok) { confirmDel = null; try { await tsCol.doc(b.dataset.tsdelok).delete(); toast("Registro apagado."); } catch { toast("Não consegui apagar."); } }
+});
+
+function vigiarTimesheet(db) {
+  tsCol = db.collection("timesheet_registros");
+  tsAtivoRef = db.doc("timesheet/ativo");
+  tsAtivoRef.onSnapshot(s => { ativo = s.exists && s.data().estado ? s.data() : null; renderTimer(); }, () => {});
+  tsCol.onSnapshot(s => { registros = s.docs.map(d => ({ id: d.id, ...d.data() })); renderRegistros(); if (!ativo) renderRecentes(); }, () => {});
 }
 
 // ---------- renderização ----------
@@ -891,17 +1249,25 @@ function toast(t) { $("toast").textContent = t; $("toast").hidden = false; clear
 // ---------- início ----------
 limpar();
 render();
-try { const v = localStorage.getItem("view"); if (["painel", "novo", "lista"].includes(v)) ir(v); } catch {}
+try { const v = localStorage.getItem("view"); if (["painel", "novo", "lista", "ts"].includes(v)) ir(v); } catch {}
 (async () => {
   sample = await window.claude?.use?.("sample");
-  $("talkCard").hidden = !sample;
+  const perm = await window.claude?.use?.("permissions");
+  if (!sample) { talkMsg("Para preencher conversando, abra esta página no claude.ai ou no app do Claude.", ""); return; }
+  const st = perm ? await perm.state("sample").catch(() => null) : null;
+  if (st === "denied") { talkMsg("A permissão para usar o Claude está desligada nesta página.", "bad"); $("talkPerm").hidden = false; }
+  $("talkPerm").onclick = async () => {
+    try { await perm.manage(); const s2 = await perm.state("sample"); if (s2 !== "denied") { $("talkPerm").hidden = true; talkMsg("Permissão ativada. Pode preencher.", "ok"); } }
+    catch { talkMsg("Abra o menu Permissões desta página (no topo) e ative o Claude.", "bad"); }
+  };
 })();
 (async () => {
   const db = await window.claude?.use?.("db");
   if (!db) { $("offline").hidden = false; cadStatus("Sem conexão com o armazenamento: a lista do NAJ não pode ser carregada aqui.", "bad"); return; }
   col = db.collection("lancamentos");
   vigiarCadastros(db);
-  col.onSnapshot(snap => { rows = snap.docs.map(d => ({ id: d.id, ...d.data() })); render(); },
+  vigiarTimesheet(db);
+  col.onSnapshot(snap => { rows = snap.docs.map(d => ({ id: d.id, ...d.data() })); render(); renderRegistros(); },
     () => { $("offline").hidden = false; });
 })();
 </script>
