@@ -16,8 +16,10 @@ O formulário não acessa o NAJ diretamente, então esta cópia precisa ser reno
 
 ## Relatório de horas da equipe (rotina separada, uma vez por dia)
 
-1. `node robo/naj-relatorio.js <pasta>/rel <primeiro dia do mês passado, DD/MM/AAAA>`: baixa as atividades de todos os usuários do NAJ
-   no período e a área de cada processo. Leva de 30 a 60 minutos; rode em segundo plano.
+1. `node robo/naj-relatorio.js <pasta>/rel <primeiro dia do mês passado, DD/MM/AAAA> --paralelo 3 --cache /tmp/naj-detalhes.json`:
+   baixa a área de cada processo (campo "Advogado do Cliente") e as atividades de todos os usuários no período. Abre cada
+   atividade (só leitura) para ler o processo vinculado e a Área Jurídica; as já lidas ficam no cache. Rode em segundo plano.
+   Núcleo de cada hora (calculado na página): área do processo vinculado → Área Jurídica da atividade → núcleo principal da pessoa.
 2. ArtifactData `get` em `relatorio` / `info` com `out_dir` (se existir) e
    `node robo/relatorio-para-formulario.js <pasta>/rel <info.json baixado ou -> <pasta>/rel/docs`.
 3. Grave cada `m-AAAA-MM-N.json` em `relatorio` (`set`, `if_version` quando já existir), apague os ids de `apagar.json`
