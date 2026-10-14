@@ -557,7 +557,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
         <div id="adm-rel" style="display:grid;gap:14px">
           <div class="card filtros-rel">
             <div class="field"><label for="rPeriodo">Período</label><select id="rPeriodo"><option value="mes">Este mês</option><option value="mesant">Mês passado</option><option value="30">Últimos 30 dias</option><option value="sem">Esta semana</option><option value="custom">Escolher datas</option></select></div>
-            <div class="field" id="rDatas" hidden><label>De / até</label><span style="display:flex;gap:6px"><input type="date" id="rDe"><input type="date" id="rAte"></span></div>
+            <div class="field" id="rDatas" hidden><label for="rDe">De</label><input type="date" id="rDe"></div>
+            <div class="field" id="rDatas2" hidden><label for="rAte">Até</label><input type="date" id="rAte"></div>
             <div class="field"><label for="rNucleo">Núcleo</label><select id="rNucleo"></select></div>
             <div class="field"><label for="rUsuario">Pessoa</label><select id="rUsuario"></select></div>
             <button class="ghost" type="button" id="rCsv" hidden>Baixar planilha (CSV)</button>
@@ -1283,12 +1284,15 @@ function vigiarAdmin(db) {
   db.doc("config/membros").onSnapshot(s => { cfgMembros = (s.exists && s.data().pessoas) || {}; renderAdm(); }, () => {});
   db.doc("config/nucleos").onSnapshot(s => { if (s.exists) cfgNucleos = { lista: NUCLEOS_PADRAO, mapa: {}, ...s.data() }; renderAdm(); }, () => {});
   db.doc("config/robo").onSnapshot(s => { cfgRobo = s.exists ? s.data() : {}; if (admAba === "pes") renderPessoas(); }, () => {});
+  // cada atualização do relatório substitui a leitura anterior inteira (nunca soma uma leitura à outra)
+  let leitura = 0;
   db.doc("relatorio/info").onSnapshot(async s => {
-    relInfo = s.exists ? s.data() : null;
-    relItens = [];
-    if (relInfo) for (const id of relInfo.documentos || []) {
-      try { const d = await db.doc("relatorio/" + id).get(); if (d.exists) relItens.push(...d.data().itens); } catch {}
+    const minha = ++leitura, info = s.exists ? s.data() : null, itens = [];
+    if (info) for (const id of info.documentos || []) {
+      try { const d = await db.doc("relatorio/" + id).get(); if (d.exists) itens.push(...d.data().itens); } catch {}
+      if (minha !== leitura) return; // chegou uma versão mais nova do relatório
     }
+    relInfo = info; relItens = itens;
     renderAdm();
   }, () => {});
 }
@@ -1301,12 +1305,14 @@ function renderAdm() {
 // relatórios: atividades de todos os usuários baixadas do NAJ pelo robô
 function periodo() {
   const v = $("rPeriodo").value, d = new Date(), iso = x => isoDia(x);
-  $("rDatas").hidden = v !== "custom";
+  $("rDatas").hidden = $("rDatas2").hidden = v !== "custom";
+  if (v === "custom" && !$("rDe").value) { const d0 = new Date(); $("rDe").value = isoDia(new Date(d0.getFullYear(), d0.getMonth(), 1)); $("rAte").value = hoje(); }
   if (v === "mes") return [iso(new Date(d.getFullYear(), d.getMonth(), 1)), hoje()];
   if (v === "mesant") return [iso(new Date(d.getFullYear(), d.getMonth() - 1, 1)), iso(new Date(d.getFullYear(), d.getMonth(), 0))];
   if (v === "30") { const x = new Date(); x.setDate(x.getDate() - 29); return [iso(x), hoje()]; }
   if (v === "sem") return [inicioSemana(), hoje()];
-  return [$("rDe").value || hoje(), $("rAte").value || hoje()];
+  const de = $("rDe").value || hoje(), ate = $("rAte").value || hoje();
+  return de <= ate ? [de, ate] : [ate, de];
 }
 function nucleoDe(a) {
   // a = [data, hora, minutos, usuário NAJ, cliente, número, área do processo, descrição]

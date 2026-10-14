@@ -1,7 +1,7 @@
 // Baixa do NAJ as atividades de TODOS os usuários num período e a área de cada processo,
 // para o painel de administrador montar relatórios por usuário e por núcleo.
 // Uso: node robo/naj-relatorio.js <pasta de saída> <data inicial DD/MM/AAAA> [data final DD/MM/AAAA]
-// Gera atividades.json [[dataISO, "HH:MM", minutos, usuário, cliente, número do processo, área do processo, descrição], ...]
+// Gera atividades.json [[dataISO, "HH:MM", minutos, usuário, cliente, número do processo, área do processo, descrição, parte contrária], ...]
 // e usuarios.json (usuários ativos do NAJ). Só pesquisa: nada é gravado no NAJ.
 const fs = require('fs');
 const path = require('path');
@@ -72,14 +72,20 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
   const procs = await paginar(p, '#TIWEDIT22', '#TIWEDIT23', () => p.$$eval('tr', trs => trs.filter(t => t.offsetParent !== null)
     .map(t => [...t.cells].map(c => c.innerText.trim())).filter(c => c.length >= 10 && /^\d+$/.test(c[1]))), 'processos');
   await p.context().close();
+  // a área do processo é o campo "Advogado do Cliente" do cadastro (coluna 5 da pesquisa)
   const areaPorNumero = new Map(), areaPorPartes = new Map(), areas = new Map();
+  const juntar = (mapa, chave, area) => { const s = mapa.get(chave) || new Set(); s.add(area); mapa.set(chave, s); };
   for (const c of procs) {
     const area = (c[5] || '').trim();
     if (!area) continue;
     areas.set(area, (areas.get(area) || 0) + 1);
-    if (dig(c[2]).length >= 10) areaPorNumero.set(dig(c[2]), area);
-    areaPorPartes.set(norm(c[3].replace(/\s*\([^)]*\)\s*$/, '')) + '|' + norm(c[4]), area);
+    if (dig(c[2]).length >= 10) juntar(areaPorNumero, dig(c[2]), area);
+    const contraria = norm(c[4]);
+    if (contraria) juntar(areaPorPartes, norm(c[3].replace(/\s*\([^)]*\)\s*$/, '')) + '|' + contraria, area);
   }
+  // só vale quando aponta para uma única área: sem processo identificado, a atividade fica sem área
+  const unica = s => (s && s.size === 1 ? [...s][0] : '');
+  fs.writeFileSync(path.join(saida, 'processos-areas.json'), JSON.stringify(procs.map(c => [c[1], c[2], c[3], c[4], c[5]])));
   console.log(`processos: ${procs.length}, áreas: ${areas.size}`);
 
   // 2) atividades de todos os usuários no período
@@ -110,8 +116,10 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
     // "Mais informações" = "CLIENTE x PARTE CONTRÁRIA - número" (número opcional)
     const m = info.match(/^(.*?)(?:\s+x\s+(.*?))?(?:\s+-\s+([\d.\-\/ ()]{10,}))?$/s) || [];
     const cliente = (m[1] || info).trim(), contraria = (m[2] || '').trim(), numero = (m[3] || '').trim();
-    const area = (dig(numero).length >= 10 && areaPorNumero.get(dig(numero))) || areaPorPartes.get(norm(cliente) + '|' + norm(contraria)) || '';
-    atividades.push([`${aa}-${mm}-${dd}`, (h || '').slice(0, 5), th * 60 + tm, usuario, cliente, numero, area, desc.replace(/\s+/g, ' ').slice(0, 140)]);
+    // área só quando a atividade identifica o processo: pelo número, ou por cliente + parte contrária
+    const area = dig(numero).length >= 10 ? unica(areaPorNumero.get(dig(numero)))
+      : contraria ? unica(areaPorPartes.get(norm(cliente) + '|' + norm(contraria))) : '';
+    atividades.push([`${aa}-${mm}-${dd}`, (h || '').slice(0, 5), th * 60 + tm, usuario, cliente, numero, area, desc.replace(/\s+/g, ' ').slice(0, 140), contraria]);
   }
   if (esperado && atividades.length < esperado * 0.97) throw new Error(`Li ${atividades.length} atividades, mas o NAJ informa ${esperado}.`);
   fs.writeFileSync(path.join(saida, 'atividades.json'), JSON.stringify(atividades));
