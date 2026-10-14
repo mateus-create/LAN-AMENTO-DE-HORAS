@@ -61,17 +61,22 @@ async function codigosAtivos(browser) {
   await p.locator('#TIWGRADBUTTON3').evaluate(e => e.click());
   await quieto(p);
   const total = Number(await p.inputValue('#TIWEDIT23')) || 1;
-  const codigos = new Set();
+  // colunas: (marcação) | código | número | cliente(qualificação) | parte contrária | advogado/área | classe | comarca | vara | ...
+  const codigos = new Map();
   const lerPagina = () => p.$$eval('tr', trs => trs.filter(t => t.offsetParent !== null)
     .map(t => [...t.cells].map(c => c.innerText.trim()))
-    .filter(c => c.length >= 10 && /^\d+$/.test(c[1])).map(c => c[1]));
+    .filter(c => c.length >= 10 && /^\d+$/.test(c[1])));
   for (let pg = 1; pg <= total; pg++) {
     if (pg > 1) {
       await p.fill('#TIWEDIT22', String(pg));
       await p.press('#TIWEDIT22', 'Enter');
       await quieto(p);
     }
-    (await lerPagina()).forEach(c => codigos.add(c));
+    for (const c of await lerPagina()) {
+      const cliente = c[3].replace(/\s*\([^)]*\)\s*$/, '');
+      const local = [c[7], c[8]].filter(x => x && x !== '-').join(' - ');
+      codigos.set(c[1], [c[1], cliente, c[4], c[2], [local, c[6]].filter(Boolean).join(' · ')]);
+    }
     if (pg % 50 === 0) console.log(`processos ativos: página ${pg}/${total}, ${codigos.size} códigos`);
   }
   const esperado = Number(((await p.innerText('body')).match(/Total de:\s*([\d.]+)\s*Processo/) || [])[1]?.replace(/\./g, '')) || 0;
@@ -130,6 +135,11 @@ async function todasPaginas(p, campoPagina, campoTotal, colunas, rotulo) {
 
   // processos: sessão nova do NAJ, porque a janela de clientes deixa a tela bloqueada
   await p.context().close();
+  const iReuso = process.argv.indexOf('--reusar-processos');
+  let processos;
+  if (iReuso > 0) {
+    processos = JSON.parse(fs.readFileSync(process.argv[iReuso + 1], 'utf8'));
+  } else {
   p = await entrar(browser);
   await p.locator('img[id^=IMMENUINFOPROCESSO]').first().click();
   await quieto(p);
@@ -139,17 +149,22 @@ async function todasPaginas(p, campoPagina, campoTotal, colunas, rotulo) {
   await p.fill('#TIWEDIT14', '');
   await p.click('#TIWGRADBUTTON8');
   await quieto(p);
-  const processos = (await todasPaginas(p, '#TIWEDIT15', '#TIWEDIT16', 4, 'processos')).map(([cod, cliente, contraria, info]) => {
+  processos = (await todasPaginas(p, '#TIWEDIT15', '#TIWEDIT16', 4, 'processos')).map(([cod, cliente, contraria, info]) => {
     // a célula traz número, comarca e classe em linhas; processos sem número começam pela comarca
     const partes = info.split('\n').map(s => s.trim()).filter(Boolean);
     const numero = partes[0] && (partes[0].replace(/\D/g, '').length >= 10) ? partes.shift() : '';
     return [cod, cliente, contraria, numero, partes.join(' · ')];
   }).sort((a, b) => Number(a[0]) - Number(b[0]));
   await p.context().close();
+  }
 
-  // só os processos ativos no NAJ
+  fs.writeFileSync(path.join(saida, 'processos-todos.json'), JSON.stringify(processos));
+
+  // só os processos ativos no NAJ; os que a pesquisa da atividade não trouxe vêm do módulo Processos
   const ativos = await codigosAtivos(browser);
-  const processosAtivos = processos.filter(x => ativos.has(x[0]));
+  const daAtividade = new Set(processos.map(x => x[0]));
+  const processosAtivos = [...processos.filter(x => ativos.has(x[0])), ...[...ativos.values()].filter(x => !daAtividade.has(x[0]))]
+    .sort((a, b) => Number(a[0]) - Number(b[0]));
   fs.writeFileSync(path.join(saida, 'processos.json'), JSON.stringify(processosAtivos));
   console.log(`processos: ${processosAtivos.length} ativos de ${processos.length}`);
   await browser.close();
