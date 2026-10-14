@@ -105,7 +105,8 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
   const cache = fs.existsSync(arqCache) ? JSON.parse(fs.readFileSync(arqCache, 'utf8')) : {};
   const salvarCache = () => fs.writeFileSync(arqCache, JSON.stringify(cache));
   const iTrab = process.argv.indexOf('--paralelo');
-  const nTrab = iTrab > 0 ? Math.max(1, Number(process.argv[iTrab + 1]) || 1) : 2;
+  // com 2 sessões do mesmo usuário o NAJ chegou a mostrar a uma a página da outra; o padrão é 1
+  const nTrab = iTrab > 0 ? Math.max(1, Number(process.argv[iTrab + 1]) || 1) : 1;
 
   async function abrirLista() {
     const q = await entrar(browser, 'Atividades');
@@ -131,7 +132,7 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
       if (img) img.click();
       return !!img;
     }, i);
-    if (!achou) return null;
+    if (!achou) { if (process.env.DEPURAR) console.log('sem ícone de edição na linha', i); return null; }
     await quieto(q);
     const descTela = await q.locator('textarea[id^=MMDESCRICAO]').filter({ visible: true }).first().inputValue().catch(() => '');
     const v = await q.$$eval('input[type=text],select', els => Object.fromEntries(els.filter(e => e.offsetParent !== null && /^(ED|CB)[A-Z]+\d*$/.test(e.id))
@@ -157,6 +158,7 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
   await p0.context().close();
 
   const brutas = [];
+  const jaVistas = new Set(); // linhas já lidas nesta execução: uma página inteira repetida = lista desatualizada
   let lidas = 0, naoConferidas = 0;
   async function trabalhador(t) {
     const q = await abrirLista();
@@ -166,7 +168,15 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
       if (pg > 1) { await q.fill('#TIWEDIT3', String(pg)); await q.press('#TIWEDIT3', 'Enter'); await quieto(q); }
       if (await q.inputValue('#TIWEDIT3') !== String(pg)) throw new Error(`Não consegui abrir a página ${pg} da lista de atividades.`);
       let linhas = await lerLinhas(q);
+      for (let tent = 0; linhas.length && linhas.every(l => jaVistas.has(chaveDe(l))) && tent < 3; tent++) {
+        console.log(`[sessão ${t + 1}] página ${pg} veio igual a uma já lida; abrindo de novo`);
+        await q.fill('#TIWEDIT3', String(pg)); await q.press('#TIWEDIT3', 'Enter'); await quieto(q); await espera(1500);
+        linhas = await lerLinhas(q);
+      }
+      if (linhas.length && linhas.every(l => jaVistas.has(chaveDe(l)))) throw new Error(`A página ${pg} da lista de atividades repete outra já lida.`);
+      linhas.forEach(l => jaVistas.add(chaveDe(l)));
       console.log(`[sessão ${t + 1}] página ${pg}/${totalPaginas} (${new Date().toISOString().slice(11, 19)})`);
+      if (process.env.DEPURAR) console.log('  1ª linha:', JSON.stringify(linhas[0]), 'linhas:', linhas.length, 'sem cache:', linhas.filter(l => !cache[chaveDe(l)]).length);
       for (let i = 0; i < linhas.length; i++) {
         const k = chaveDe(linhas[i]);
         if (!cache[k]) {
