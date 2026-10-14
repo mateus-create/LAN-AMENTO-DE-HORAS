@@ -16,7 +16,7 @@ O formulário não acessa o NAJ diretamente, então esta cópia precisa ser reno
 
 ## Relatório de horas da equipe (rotina separada, uma vez por dia)
 
-1. `node robo/naj-relatorio.js <pasta>/rel <primeiro dia do mês passado, DD/MM/AAAA> --paralelo 3 --cache /tmp/naj-detalhes.json`:
+1. `node robo/naj-relatorio.js <pasta>/rel <primeiro dia do mês passado, DD/MM/AAAA> --paralelo 2 --cache /tmp/naj-detalhes.json`:
    baixa a área de cada processo (campo "Advogado do Cliente") e as atividades de todos os usuários no período. Abre cada
    atividade (só leitura) para ler o processo vinculado e a Área Jurídica; as já lidas ficam no cache. Rode em segundo plano.
    Núcleo de cada hora (calculado na página): área do processo vinculado → Área Jurídica da atividade → núcleo principal da pessoa.
