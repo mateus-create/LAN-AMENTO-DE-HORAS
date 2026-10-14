@@ -1,10 +1,10 @@
-# Atualização dos cadastros do NAJ no formulário (uma vez por dia)
+# Atualização dos cadastros do NAJ no formulário (de hora em hora)
 
 O formulário sugere clientes e mostra processos a partir de uma cópia da lista do NAJ,
 guardada na coleção `cadastros` do formulário https://claude.ai/artifact/DW1sanezeJtNKf3D3N2uyf.
 O formulário não acessa o NAJ diretamente, então esta cópia precisa ser renovada.
 
-1. `node robo/naj-cadastros.js <pasta>`: baixa clientes (ativos e inativos) e só os processos com situação ativa no NAJ (filtro "Somente Ativos" do módulo Processos). Leva de 30 a 90 minutos.
+1. `node robo/naj-cadastros.js <pasta>`: baixa clientes (ativos e inativos) e só os processos com situação ativa no NAJ (filtro "Somente Ativos" do módulo Processos). Leva cerca de 15 a 25 minutos.
    Rode em segundo plano. Nada é gravado no NAJ.
 2. `node robo/cadastros-para-formulario.js <pasta> <pasta>/docs`: divide as listas em documentos de até ~200 KB
    (`clientes-N`, `processos-N`) e gera `info`.
@@ -14,11 +14,11 @@ O formulário não acessa o NAJ diretamente, então esta cópia precisa ser reno
    Grave `info` por último. Apague (`delete`) os documentos `clientes-N`/`processos-N` que sobraram de uma lista maior.
 5. Se o download falhar no meio, não grave nada: o formulário continua com a cópia anterior.
 
-## Relatório de horas da equipe (mesma rotina diária)
+## Relatório de horas da equipe (rotina separada, uma vez por dia)
 
-6. `node robo/naj-relatorio.js <pasta>/rel <primeiro dia do mês passado, DD/MM/AAAA>`: baixa as atividades de todos os usuários do NAJ
+1. `node robo/naj-relatorio.js <pasta>/rel <primeiro dia do mês passado, DD/MM/AAAA>`: baixa as atividades de todos os usuários do NAJ
    no período e a área de cada processo. Leva de 30 a 60 minutos; rode em segundo plano.
-7. ArtifactData `get` em `relatorio` / `info` com `out_dir` (se existir) e
+2. ArtifactData `get` em `relatorio` / `info` com `out_dir` (se existir) e
    `node robo/relatorio-para-formulario.js <pasta>/rel <info.json baixado ou -> <pasta>/rel/docs`.
-8. Grave cada `m-AAAA-MM-N.json` em `relatorio` (`set`, `if_version` quando já existir), apague os ids de `apagar.json`
+3. Grave cada `m-AAAA-MM-N.json` em `relatorio` (`set`, `if_version` quando já existir), apague os ids de `apagar.json`
    e grave `info` por último. A coleção `relatorio` só é lida por administradores.
