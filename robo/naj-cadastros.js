@@ -133,39 +133,12 @@ async function todasPaginas(p, campoPagina, campoTotal, colunas, rotulo) {
   console.log(`clientes: ${listaClientes.length}`);
   }
 
-  // processos: sessão nova do NAJ, porque a janela de clientes deixa a tela bloqueada
   await p.context().close();
-  const iReuso = process.argv.indexOf('--reusar-processos');
-  let processos;
-  if (iReuso > 0) {
-    processos = JSON.parse(fs.readFileSync(process.argv[iReuso + 1], 'utf8'));
-  } else {
-  p = await entrar(browser);
-  await p.locator('img[id^=IMMENUINFOPROCESSO]').first().click();
-  await quieto(p);
-  await p.locator('img[id^=IMCODIGOPROCESSO]').click();
-  await quieto(p);
-  await p.fill('#TIWEDIT13', '');
-  await p.fill('#TIWEDIT14', '');
-  await p.click('#TIWGRADBUTTON8');
-  await quieto(p);
-  processos = (await todasPaginas(p, '#TIWEDIT15', '#TIWEDIT16', 4, 'processos')).map(([cod, cliente, contraria, info]) => {
-    // a célula traz número, comarca e classe em linhas; processos sem número começam pela comarca
-    const partes = info.split('\n').map(s => s.trim()).filter(Boolean);
-    const numero = partes[0] && (partes[0].replace(/\D/g, '').length >= 10) ? partes.shift() : '';
-    return [cod, cliente, contraria, numero, partes.join(' · ')];
-  }).sort((a, b) => Number(a[0]) - Number(b[0]));
-  await p.context().close();
-  }
 
-  fs.writeFileSync(path.join(saida, 'processos-todos.json'), JSON.stringify(processos));
-
-  // só os processos ativos no NAJ; os que a pesquisa da atividade não trouxe vêm do módulo Processos
+  // processos: só os ativos, direto do filtro "Somente Ativos" do módulo Processos (rápido o bastante para rodar de hora em hora)
   const ativos = await codigosAtivos(browser);
-  const daAtividade = new Set(processos.map(x => x[0]));
-  const processosAtivos = [...processos.filter(x => ativos.has(x[0])), ...[...ativos.values()].filter(x => !daAtividade.has(x[0]))]
-    .sort((a, b) => Number(a[0]) - Number(b[0]));
+  const processosAtivos = [...ativos.values()].sort((a, b) => Number(a[0]) - Number(b[0]));
   fs.writeFileSync(path.join(saida, 'processos.json'), JSON.stringify(processosAtivos));
-  console.log(`processos: ${processosAtivos.length} ativos de ${processos.length}`);
+  console.log(`processos ativos: ${processosAtivos.length}`);
   await browser.close();
 })();
