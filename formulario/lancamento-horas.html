@@ -1371,7 +1371,7 @@ function renderRel() {
     $("rMapa").innerHTML = areas.length ? areas.map(([ar, qt], i) => `<label>${esc(ar)} <small>${qt} processos</small><select data-area="${i}"><option value="">Núcleo principal da pessoa</option>${nucleosLista().map(n => `<option ${cfgNucleos.mapa[ar] === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`).join("") : '<span class="hint">As áreas aparecem depois que o robô baixar o relatório.</span>';
     const pn = cfgNucleos.pessoas || {};
     const usuariosNaj = [...new Set([...((relInfo && relInfo.usuarios) || []), ...relItens.map(a => a[3])])].sort();
-    $("rPessoasNaj").innerHTML = usuariosNaj.map(u => `<label>${esc(u)}${pn[u] && pn[u].nucleos && pn[u].nucleos.length > 1 ? `<small>também: ${esc(pn[u].nucleos.filter(x => x !== pn[u].principal).join(", "))}</small>` : ""}<select data-pessoanaj="${esc(u)}"><option value="">Escolha o núcleo…</option>${nucleosLista().map(n => `<option ${pn[u] && pn[u].principal === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`).join("");
+    $("rPessoasNaj").innerHTML = usuariosNaj.map(u => `<label>${esc(u)}${pn[u] && pn[u].nucleos && pn[u].nucleos.length > 1 ? `<small>também: ${esc(pn[u].nucleos.filter(x => x !== pn[u].principal).join(", "))}</small>` : ""}<select data-pessoanaj="${esc(u)}"><option value="">Escolha o núcleo…</option><option value="__todos" ${pn[u] && pn[u].todos ? "selected" : ""}>Todas as áreas (pela área da atividade)</option>${nucleosLista().map(n => `<option ${pn[u] && pn[u].principal === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`).join("");
     const areasAtiv = (relInfo && relInfo.areasAtividade) || AREAS.map(a => [a, 0]);
     const mA = cfgNucleos.mapaAtividade || {};
     $("rMapaAtiv").innerHTML = areasAtiv.map(([ar, qt], i) => `<label>${esc(ar)} ${qt ? `<small>${qt} atividades</small>` : ""}<select data-areaativ="${esc(ar)}"><option value="">Núcleo principal da pessoa</option>${nucleosLista().map(n => `<option ${mA[ar] === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></label>`).join("");
@@ -1387,7 +1387,8 @@ $("rMapaSalvar").onclick = async () => {
   const pessoas = { ...(cfgNucleos.pessoas || {}) };
   $("rPessoasNaj").querySelectorAll("select").forEach(s => {
     const u = s.dataset.pessoanaj, antes = pessoas[u] || { nucleos: [] };
-    if (s.value) pessoas[u] = { principal: s.value, nucleos: [...new Set([s.value, ...(antes.nucleos || [])])] }; else delete pessoas[u];
+    if (s.value === "__todos") pessoas[u] = { todos: true, nucleos: [] };
+    else if (s.value) pessoas[u] = { principal: s.value, nucleos: [...new Set([s.value, ...(antes.nucleos || [])])] }; else delete pessoas[u];
   });
   const lista = $("rNucleosLista").value.split(",").map(x => x.trim()).filter(Boolean);
   try { await dbRef.doc("config/nucleos").set({ lista: lista.length ? lista : NUCLEOS_PADRAO, mapa, mapaAtividade, pessoas }); toast("Núcleos salvos."); } catch { toast("Não consegui salvar. Tente de novo."); }
