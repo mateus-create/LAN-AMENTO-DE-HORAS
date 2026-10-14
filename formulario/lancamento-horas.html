@@ -561,6 +561,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
             <div class="field" id="rDatas2" hidden><label for="rAte">Até</label><input type="date" id="rAte"></div>
             <div class="field"><label for="rNucleo">Núcleo</label><select id="rNucleo"></select></div>
             <div class="field"><label for="rUsuario">Pessoa</label><select id="rUsuario"></select></div>
+            <div class="field"><label for="rArea">Advogado do Cliente (área do processo)</label><select id="rArea"></select></div>
             <button class="ghost" type="button" id="rCsv" hidden>Baixar planilha (CSV)</button>
           </div>
           <div class="hint" id="rFonte">Carregando o relatório do NAJ…</div>
@@ -1329,13 +1330,17 @@ function renderRel() {
   const [de, ate] = periodo();
   const nucs = [...nucleosLista(), "Sem núcleo"];
   const usuarios = [...new Set(relItens.map(a => a[3]))].sort();
-  const keepN = $("rNucleo").value, keepU = $("rUsuario").value;
+  const keepN = $("rNucleo").value, keepU = $("rUsuario").value, keepA = $("rArea").value;
+  const areasProc = [...new Set(relItens.map(a => a[6]).filter(Boolean))].sort((x, y) => x.localeCompare(y, "pt-BR"));
+  $("rArea").innerHTML = '<option value="">Todas</option><option value="__sem">Sem processo vinculado</option>' + areasProc.map(a => `<option>${esc(a)}</option>`).join("");
+  $("rArea").value = keepA;
   $("rNucleo").innerHTML = '<option value="">Todos</option>' + nucs.map(n => `<option>${esc(n)}</option>`).join("");
   $("rUsuario").innerHTML = '<option value="">Todas</option>' + usuarios.map(u => `<option>${esc(u)}</option>`).join("");
   $("rNucleo").value = keepN; $("rUsuario").value = keepU;
   if (!relInfo) { $("rFonte").textContent = "O relatório ainda não foi baixado do NAJ. O robô atualiza todo dia de manhã."; }
   else $("rFonte").textContent = `Dados do NAJ (todos os usuários), de ${dataBR(relInfo.de)} até ${dataBR(relInfo.ate)}, atualizados em ${new Date(relInfo.atualizadoEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}. Inclui o que foi lançado direto no NAJ.`;
-  relFiltrado = relItens.filter(a => a[0] >= de && a[0] <= ate && (!keepU || a[3] === keepU) && (!keepN || nucleoDe(a) === keepN));
+  relFiltrado = relItens.filter(a => a[0] >= de && a[0] <= ate && (!keepU || a[3] === keepU) && (!keepN || nucleoDe(a) === keepN)
+    && (!keepA || (keepA === "__sem" ? !a[6] : a[6] === keepA)));
   const tot = relFiltrado.reduce((x, a) => x + a[2], 0);
   $("rkHoras").textContent = fmtDur(tot);
   $("rkAtiv").textContent = relFiltrado.length.toLocaleString("pt-BR");
@@ -1365,7 +1370,7 @@ function renderRel() {
     if (document.activeElement !== $("rNucleosLista")) $("rNucleosLista").value = nucleosLista().join(", ");
   }
 }
-["rPeriodo", "rDe", "rAte", "rNucleo", "rUsuario"].forEach(id => $(id).addEventListener("change", renderRel));
+["rPeriodo", "rDe", "rAte", "rNucleo", "rUsuario", "rArea"].forEach(id => $(id).addEventListener("change", renderRel));
 $("rMapaSalvar").onclick = async () => {
   const areas = (relInfo && relInfo.areas) || [], mapa = {};
   $("rMapa").querySelectorAll("select").forEach(s => { if (s.value) mapa[areas[+s.dataset.area][0]] = s.value; });
