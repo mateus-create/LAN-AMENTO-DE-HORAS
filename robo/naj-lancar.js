@@ -259,7 +259,10 @@ async function lancar(p, e, teste, pastaPrints) {
   }
 
   await p.locator('input[value="Gravar"]').filter({ visible: true }).first().click();
-  await espera(5000);
+  await quieto(p);
+  await espera(1500);
+  // o NAJ confirma com "Atividade [INCLUÍDA] com sucesso!" e já abre uma atividade nova em branco
+  const incluida = /INCLU[IÍ]DA\]?\s*com sucesso/i.test(await p.innerText('body'));
   const avisos = await p.$$eval('*', els => els.filter(x => x.offsetParent !== null && x.children.length === 0 && /grav|sucesso|erro|aten|obrigat/i.test(x.innerText || '')).map(x => x.innerText.trim()).slice(0, 5));
   await p.screenshot({ path: print });
   const ok = p.locator('button:visible:has-text("OK"), input[type=button][value="Ok"]:visible');
@@ -269,7 +272,7 @@ async function lancar(p, e, teste, pastaPrints) {
   // confirma pela lista de atividades
   const lista = await p.innerText('body');
   const trecho = e.descricao.trim().slice(0, 40);
-  if (!lista.includes(trecho)) {
+  if (!incluida && !lista.includes(trecho)) {
     throw new ErroLancamento(`Cliquei em Gravar, mas a atividade não apareceu na lista. Aviso do NAJ: ${avisos.join(' | ') || 'nenhum'}`);
   }
   return { status: 'lancado', mensagem: `Lançado no NAJ (código ${conferido.codigo}, tempo ${conferido.tempo}).`, ...r, codigoNaj: conferido.codigo, conferido, print };
