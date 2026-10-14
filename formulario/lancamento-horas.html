@@ -259,7 +259,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
 .live-b { background: var(--ring) !important; color: #062019 !important }
 #tIdle > *, #tRun > *, .timer > * { min-width: 0 }
 .timer select { min-width: 0; max-width: 100%; text-overflow: ellipsis }
-@media (max-width: 860px) { .tsgrid { grid-template-columns: minmax(0, 1fr) } .wk { gap: 4px } .wk b { font-size: .76rem } }
+@media (max-width: 860px) { .tsgrid { grid-template-columns: minmax(0, 1fr) } .wk { gap: 3px } .wk div { padding: 7px 1px } .wk b { font-size: clamp(.56rem, 2.5vw, .76rem); letter-spacing: -.02em } }
 
 .filtros-rel { display: flex; flex-wrap: wrap; gap: 12px; align-items: end }
 .filtros-rel .field { min-width: 150px; flex: 1 }
@@ -372,9 +372,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
                 <b id="ringPct">0%</b>
               </div>
               <div class="legend">
-                <div><i style="background:var(--ring)"></i>Lançado<em id="lgOk">00:00</em></div>
-                <div><i style="background:#9db4f0"></i>Na fila<em id="lgFila">00:00</em></div>
-                <div><i style="background:#ff8a80"></i>Com problema<em id="lgErr">00:00</em></div>
+                <div><i style="background:var(--ring)"></i>Lançado<em id="lgOk">00:00:00</em></div>
+                <div><i style="background:#9db4f0"></i>Na fila<em id="lgFila">00:00:00</em></div>
+                <div><i style="background:#ff8a80"></i>Com problema<em id="lgErr">00:00:00</em></div>
               </div>
             </div>
           </div>
@@ -450,7 +450,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
             <div class="clock full">
               <div class="field"><label for="inicio">Comecei às</label><input id="inicio" type="time" class="mono"></div>
               <div class="field"><label for="termino">Terminei às</label><input id="termino" type="time" class="mono"></div>
-              <div class="dur-box" id="duration"><span class="hint" style="color:var(--hero-muted)">Tempo</span><b id="dur">00:00</b><button type="button" id="agora">Terminei agora</button></div>
+              <div class="dur-box" id="duration"><span class="hint" style="color:var(--hero-muted)">Tempo</span><b id="dur">00:00:00</b><button type="button" id="agora">Terminei agora</button></div>
             </div>
 
             <div class="switch full">
@@ -516,7 +516,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
 
         <!-- ao parar -->
         <div class="stopsheet" id="tSheet" hidden>
-          <div class="card-head" style="margin:0"><h2 id="tSheetTitle">Tempo registrado</h2><span class="total" id="tSheetTotal">00:00</span></div>
+          <div class="card-head" style="margin:0"><h2 id="tSheetTitle">Tempo registrado</h2><span class="total" id="tSheetTotal">00:00:00</span></div>
           <div class="hint" id="tSheetWho"></div>
           <div class="field"><label for="tsFimDesc">Descrição da atividade</label><textarea id="tsFimDesc" placeholder="O que foi feito"></textarea></div>
           <div class="tsgrid">
@@ -534,7 +534,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
 
         <div class="grid2">
           <div class="card">
-            <div class="card-head"><h2>Esta semana</h2><b id="tsWeekTotal">00:00</b></div>
+            <div class="card-head"><h2>Esta semana</h2><b id="tsWeekTotal">00:00:00</b></div>
             <div class="wk" id="tsWeek"></div>
             <div class="card-head" style="margin:18px 0 10px"><h2>Por cliente</h2></div>
             <div class="byclient" id="tsByClient"><span class="hint">Nada registrado nesta semana.</span></div>
@@ -642,7 +642,8 @@ const hoje = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTi
 const inicioSemana = () => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
 const agora = () => new Date().toTimeString().slice(0, 5);
 const min = t => { const [h, m] = (t || "").split(":").map(Number); return h * 60 + m; };
-const fmtDur = m => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+// durações aparecem como HH:MM:SS (o NAJ guarda minutos; os segundos são só visuais)
+const fmtDur = m => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}:00`;
 const dataBR = iso => iso ? iso.split("-").reverse().join("/") : "";
 const dataCurta = iso => iso ? iso.split("-").reverse().slice(0, 2).join("/") : "";
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -680,7 +681,7 @@ function limpar() {
 function atualizarDur() {
   const a = $("inicio").value, b = $("termino").value;
   const d = a && b ? min(b) - min(a) : 0;
-  $("dur").textContent = d > 0 ? fmtDur(d) : "00:00";
+  $("dur").textContent = d > 0 ? fmtDur(d) : "00:00:00";
   $("duration").classList.toggle("badtime", !!(a && b && d <= 0));
 }
 ["inicio", "termino"].forEach(id => $(id).addEventListener("input", atualizarDur));
@@ -1106,7 +1107,7 @@ function abrirFolha(reg) {
   const r = reg || parado;
   $("tSheet").dataset.reg = reg ? reg.id : "";
   $("tSheetTitle").textContent = reg ? "Enviar ao NAJ" : "Tempo registrado";
-  $("tSheetTotal").textContent = fmtHMS(reg ? reg.segundos * 1000 : r.totalMs).slice(0, 5);
+  $("tSheetTotal").textContent = fmtHMS(reg ? reg.segundos * 1000 : r.totalMs);
   $("tSheetWho").textContent = `${r.cliente} · ${tsResumoProc(r)}`;
   $("tsFimDesc").value = r.descricao || "";
   $("tsArea").value = r.area || ""; $("tsTipo").value = r.tipo || "";
@@ -1204,15 +1205,15 @@ function renderRegistros() {
   for (let i = 0; i < 7; i++) {
     const d = new Date(base); d.setDate(base.getDate() + i); const iso = isoDia(d);
     const seg = semana.filter(r => r.data === iso).reduce((a, r) => a + (r.segundos || 0), 0);
-    html += `<div class="${iso === hoje() ? "today" : ""}"><small>${dias[i]}</small><b>${seg ? fmtHMS(seg * 1000).slice(0, 5) : "–"}</b></div>`;
+    html += `<div class="${iso === hoje() ? "today" : ""}"><small>${dias[i]}</small><b>${seg ? fmtHMS(seg * 1000) : "–"}</b></div>`;
   }
   $("tsWeek").innerHTML = html;
   const total = semana.reduce((a, r) => a + (r.segundos || 0), 0);
-  $("tsWeekTotal").textContent = fmtHMS(total * 1000).slice(0, 5);
+  $("tsWeekTotal").textContent = fmtHMS(total * 1000);
   const porCli = {};
   semana.forEach(r => porCli[r.cliente] = (porCli[r.cliente] || 0) + (r.segundos || 0));
   const top = Object.entries(porCli).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  $("tsByClient").innerHTML = top.length ? top.map(([c, sgs]) => `<div><span>${esc(c)}</span><b>${fmtHMS(sgs * 1000).slice(0, 5)}</b><i style="--w:${Math.round(sgs / top[0][1] * 100)}%"></i></div>`).join("") : '<span class="hint">Nada registrado nesta semana.</span>';
+  $("tsByClient").innerHTML = top.length ? top.map(([c, sgs]) => `<div><span>${esc(c)}</span><b>${fmtHMS(sgs * 1000)}</b><i style="--w:${Math.round(sgs / top[0][1] * 100)}%"></i></div>`).join("") : '<span class="hint">Nada registrado nesta semana.</span>';
 
   const lista = [...registros].sort((a, b) => (b.data + b.inicio).localeCompare(a.data + a.inicio)).slice(0, 40);
   if (!lista.length) { $("tsList").innerHTML = '<div class="empty"><b>Nenhum registro ainda.</b><span>Escolha o cliente e toque em Iniciar.</span></div>'; return; }
@@ -1223,7 +1224,7 @@ function renderRegistros() {
       <div class="when">${dataCurta(r.data)} · ${esc(r.inicio)}–${esc(r.termino)}</div>
       <div class="who"><div class="client">${esc(r.cliente)}</div><div class="meta">${esc(tsResumoProc(r))}</div>${r.descricao ? `<div class="desc">${esc(r.descricao)}</div>` : ""}</div>
       <div class="pillcell">${st}</div>
-      <div class="dur">${fmtHMS((r.segundos || 0) * 1000).slice(0, 5)}</div>
+      <div class="dur">${fmtHMS((r.segundos || 0) * 1000)}</div>
       <div class="acts">${r.lancamentoId ? "" : confirmDel === "ts:" + r.id
         ? `<span class="confirm">Apagar? <button class="ghost danger" type="button" data-tsdelok="${r.id}">Apagar</button><button class="ghost" type="button" data-tsdelno="1">Manter</button></span>`
         : `<button class="ghost" type="button" data-tsdel="${r.id}">Apagar</button><button class="ghost" type="button" data-tssend="${r.id}">Enviar ao NAJ</button>`}</div>
