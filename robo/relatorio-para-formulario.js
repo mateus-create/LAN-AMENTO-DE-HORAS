@@ -1,6 +1,7 @@
 // Divide as atividades baixadas do NAJ em documentos por mês (coleção "relatorio" do formulário).
 // Uso: node robo/relatorio-para-formulario.js <pasta do naj-relatorio> <info atual.json ou -> <pasta de saída>
-// Os meses baixados agora substituem os mesmos meses no formulário; meses mais antigos são mantidos.
+// Os meses baixados agora substituem os mesmos meses no formulário; os outros meses são mantidos
+// (assim dá para acrescentar meses antigos sem perder os recentes).
 // Gera um JSON por documento, info.json e apagar.json (documentos antigos dos meses substituídos).
 const fs = require('fs');
 const path = require('path');
@@ -28,10 +29,10 @@ const apagar = (infoAtual.documentos || []).filter(id => meses.includes(mesDe(id
 const datas = atividades.map(a => a[0]).sort();
 fs.writeFileSync(path.join(saida, 'info.json'), JSON.stringify({
   de: [infoAtual.de, datas[0]].filter(Boolean).sort()[0] || null,
-  ate: datas[datas.length - 1] || null,
+  ate: [infoAtual.ate, datas[datas.length - 1]].filter(Boolean).sort().pop() || null,
   atualizadoEm: new Date().toISOString(),
   documentos: [...mantidos, ...novos].sort(),
-  usuarios: ler(path.join(entrada, 'usuarios.json')),
+  usuarios: [...new Set([...(infoAtual.usuarios || []), ...ler(path.join(entrada, 'usuarios.json'))])].sort(),
   areas: ler(path.join(entrada, 'areas.json')),
   areasAtividade: fs.existsSync(path.join(entrada, 'areas-atividade.json')) ? ler(path.join(entrada, 'areas-atividade.json')) : [],
 }));
