@@ -120,7 +120,7 @@ button:focus-visible, .seg-tabs button:focus-visible { outline: 2px solid var(--
 .seg-tabs button { flex: none; border: 0; background: transparent; color: var(--muted); padding: 7px 12px; border-radius: 8px; font: 600 .82rem var(--sans); cursor: pointer; white-space: nowrap }
 .seg-tabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / .1) }
 .seg-tabs .n { font-family: var(--mono); font-size: .75rem; opacity: .7; margin-left: 4px }
-.rows { display: grid }
+.rows { display: grid; grid-template-columns: minmax(0, 1fr); container-type: inline-size }
 .row { display: grid; grid-template-columns: 150px minmax(0, 1fr) 118px 64px auto; gap: 14px; align-items: center; padding: 13px 4px; border-top: 1px solid var(--line) }
 .row:first-child { border-top: 0 }
 .row .when { white-space: nowrap; font: 500 .8rem var(--mono); color: var(--muted); font-variant-numeric: tabular-nums }
@@ -163,7 +163,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
 .types label:has(input:checked) { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); background: var(--sunken) }
 .types label:has(input:focus-visible) { outline: 2px solid var(--wait); outline-offset: 2px }
 .clock { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end }
-.dur-box { background: var(--hero); color: var(--hero-ink); border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 46px }
+.dur-box { min-width: 0; flex-wrap: wrap; background: var(--hero); color: var(--hero-ink); border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 46px }
 .dur-box b { font: 800 1.3rem var(--mono) }
 .dur-box.badtime b { color: var(--bad) }
 .dur-box button { border: 1px solid #3a3f49; background: transparent; color: var(--hero-ink); border-radius: 999px; padding: 4px 10px; font: 600 .72rem var(--sans); cursor: pointer; white-space: nowrap }
@@ -289,6 +289,21 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
 .offline { background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 10px 12px; font-size: .85rem; font-weight: 600 }
 .toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: 12px; font-size: .88rem; font-weight: 600; z-index: 30; max-width: calc(100% - 32px); box-shadow: 0 8px 24px rgb(0 0 0 / .2) }
 
+/* lista estreita (celular, notebook, card lateral): empilha em vez de espremer o nome do cliente */
+@container (max-width: 680px) {
+  .row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; padding: 14px 2px }
+  .row .when { grid-column: 1; grid-row: 1 }
+  .row .pillcell { grid-column: 2; grid-row: 1; justify-self: end }
+  .row .who { grid-column: 1 / -1 }
+  .row .dur { grid-column: 1; text-align: left; font-size: .85rem }
+  .row .acts { grid-column: 2 }
+  .row .acts:empty { display: none }
+  .problem, .okinfo { grid-column: 1 / -1 }
+}
+
+/* notebook: o horário de término e o botão "Terminei agora" não cabem em três colunas */
+@media (max-width: 1200px) { .clock { grid-template-columns: repeat(2, minmax(0, 1fr)) } .clock .dur-box { grid-column: 1 / -1 } }
+
 /* celular */
 @media (max-width: 860px) {
   .shell { grid-template-columns: 1fr }
@@ -304,13 +319,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
   .types { grid-template-columns: 1fr }
   .clock { grid-template-columns: repeat(2, minmax(0, 1fr)) }
   .clock .dur-box { grid-column: 1 / -1 }
-  .row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; padding: 14px 2px }
-  .row .when { grid-column: 1; grid-row: 1 }
-  .row .pillcell { grid-column: 2; grid-row: 1; justify-self: end }
-  .row .who { grid-column: 1 / -1 }
-  .row .dur { grid-column: 1; text-align: left; font-size: .85rem }
-  .row .acts { grid-column: 2 }
-  .problem, .okinfo { grid-column: 1 / -1 }
   .hero { padding: 18px }
   .hero .btn { width: 100% }
 }
