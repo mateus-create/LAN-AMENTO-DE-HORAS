@@ -4,7 +4,7 @@ O formulário sugere clientes e mostra processos a partir de uma cópia da lista
 guardada na coleção `cadastros` do formulário https://claude.ai/artifact/DW1sanezeJtNKf3D3N2uyf.
 O formulário não acessa o NAJ diretamente, então esta cópia precisa ser renovada.
 
-1. `node robo/naj-cadastros.js <pasta>`: baixa clientes (ativos e inativos) e processos do NAJ. Leva de 30 a 90 minutos.
+1. `node robo/naj-cadastros.js <pasta>`: baixa clientes (ativos e inativos) e só os processos com situação ativa no NAJ (filtro "Somente Ativos" do módulo Processos). Leva de 30 a 90 minutos.
    Rode em segundo plano. Nada é gravado no NAJ.
 2. `node robo/cadastros-para-formulario.js <pasta> <pasta>/docs`: divide as listas em documentos de até ~200 KB
    (`clientes-N`, `processos-N`) e gera `info`.

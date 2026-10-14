@@ -1,7 +1,7 @@
 // Baixa do NAJ a lista de clientes e de processos (as mesmas pesquisas da tela "Nova Atividade"),
 // para o formulário sugerir nomes e mostrar o processo pelo código sem precisar acessar o NAJ.
 // Uso: node robo/naj-cadastros.js <pasta de saída>
-// Gera clientes.json [[código, nome, CPF/CNPJ], ...] e processos.json [[código, cliente, parte contrária, número, "comarca · classe"], ...]
+// Gera clientes.json [[código, nome, CPF/CNPJ], ...] e processos.json (só processos com situação ativa no NAJ) [[código, cliente, parte contrária, número, "comarca · classe"], ...]
 // Nada é gravado no NAJ: a tela "Nova Atividade" é aberta só para usar as pesquisas e é fechada sem Gravar.
 const fs = require('fs');
 const path = require('path');
@@ -9,7 +9,7 @@ let chromium;
 try { ({ chromium } = require('playwright')); } catch { ({ chromium } = require('/opt/node22/lib/node_modules/playwright')); }
 const espera = ms => new Promise(r => setTimeout(r, ms));
 
-async function entrar(browser) {
+async function entrar(browser, modulo = 'atividade') {
   const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
   const p = await ctx.newPage();
   p.pendentes = 0;
@@ -34,6 +34,12 @@ async function entrar(browser) {
   await espera(5000);
   await p.locator('text="Controles"').first().click();
   await espera(800);
+  if (modulo === 'processos') {
+    // módulo Processos: usado só para a pesquisa; ele abre um cadastro em branco que nunca é gravado
+    await p.locator('text="Processos"').first().click();
+    await espera(6000);
+    return p;
+  }
   await p.locator('text="Atividades"').first().click();
   await espera(4000);
   await p.locator('text="Nova Atividade"').first().click();
@@ -45,6 +51,34 @@ async function quieto(p) {
   await espera(300);
   for (let i = 0; i < 200 && p.pendentes > 0; i++) await espera(100);
   await espera(300);
+}
+
+// Códigos dos processos com situação cadastral ativa (judicial ou extrajudicial), pela pesquisa do módulo Processos.
+async function codigosAtivos(browser) {
+  const p = await entrar(browser, 'processos');
+  await p.selectOption('#TIWCOMBOBOX2', { index: 1 }); // "* Somente Ativos *"
+  await quieto(p);
+  await p.locator('#TIWGRADBUTTON3').evaluate(e => e.click());
+  await quieto(p);
+  const total = Number(await p.inputValue('#TIWEDIT23')) || 1;
+  const codigos = new Set();
+  const lerPagina = () => p.$$eval('tr', trs => trs.filter(t => t.offsetParent !== null)
+    .map(t => [...t.cells].map(c => c.innerText.trim()))
+    .filter(c => c.length >= 10 && /^\d+$/.test(c[1])).map(c => c[1]));
+  for (let pg = 1; pg <= total; pg++) {
+    if (pg > 1) {
+      await p.fill('#TIWEDIT22', String(pg));
+      await p.press('#TIWEDIT22', 'Enter');
+      await quieto(p);
+    }
+    (await lerPagina()).forEach(c => codigos.add(c));
+    if (pg % 50 === 0) console.log(`processos ativos: página ${pg}/${total}, ${codigos.size} códigos`);
+  }
+  const esperado = Number(((await p.innerText('body')).match(/Total de:\s*([\d.]+)\s*Processo/) || [])[1]?.replace(/\./g, '')) || 0;
+  await p.context().close();
+  console.log(`processos ativos: ${codigos.size} (o NAJ informa ${esperado})`);
+  if (esperado && codigos.size < esperado * 0.98) throw new Error(`Li ${codigos.size} processos ativos, mas o NAJ informa ${esperado}. Nada foi alterado.`);
+  return codigos;
 }
 
 async function linhas(p, colunas) {
@@ -111,7 +145,12 @@ async function todasPaginas(p, campoPagina, campoTotal, colunas, rotulo) {
     const numero = partes[0] && (partes[0].replace(/\D/g, '').length >= 10) ? partes.shift() : '';
     return [cod, cliente, contraria, numero, partes.join(' · ')];
   }).sort((a, b) => Number(a[0]) - Number(b[0]));
-  fs.writeFileSync(path.join(saida, 'processos.json'), JSON.stringify(processos));
-  console.log(`processos: ${processos.length}`);
+  await p.context().close();
+
+  // só os processos ativos no NAJ
+  const ativos = await codigosAtivos(browser);
+  const processosAtivos = processos.filter(x => ativos.has(x[0]));
+  fs.writeFileSync(path.join(saida, 'processos.json'), JSON.stringify(processosAtivos));
+  console.log(`processos: ${processosAtivos.length} ativos de ${processos.length}`);
   await browser.close();
 })();

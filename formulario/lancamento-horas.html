@@ -790,7 +790,7 @@ function mostrarProcesso() {
   }
   if (cadOk && (cod || num.length >= 10)) {
     info.className = "procinfo warn";
-    info.textContent = cod ? `Código ${cod} não está na lista baixada do NAJ. O robô confere direto no NAJ ao lançar.` : "Número não está na lista baixada do NAJ. O robô procura direto no NAJ ao lançar.";
+    info.textContent = cod ? `O processo ${cod} não está entre os processos ativos do NAJ (pode estar baixado ou ter sido cadastrado hoje). Se enviar assim, o robô procura direto no NAJ.` : "Este número não está entre os processos ativos do NAJ (pode estar baixado ou ter sido cadastrado hoje). Se enviar assim, o robô procura direto no NAJ.";
     wrap.hidden = false;
     return;
   }
@@ -798,7 +798,7 @@ function mostrarProcesso() {
   const nomeCli = sel.clienteCod ? norm($("cliente").value) : "";
   const doCliente = nomeCli ? PROC.filter(x => norm(x[1]) === nomeCli) : [];
   if (doCliente.length) {
-    lista.innerHTML = `<span>Processos deste cliente no NAJ (${doCliente.length}) — toque para vincular</span>` +
+    lista.innerHTML = `<span>Processos ativos deste cliente no NAJ (${doCliente.length}) — toque para vincular</span>` +
       doCliente.slice(0, 12).map(x => `<button type="button" data-proc="${esc(x[0])}">${esc(x[2] || "Sem parte contrária")}<small>Código ${esc(x[0])}${x[3] ? " · " + esc(x[3]) : ""}${x[4] ? " · " + esc(x[4]) : ""}</small></button>`).join("") +
       (doCliente.length > 12 ? `<span>Mais ${doCliente.length - 12}: informe o código ou o número acima.</span>` : "");
     lista.hidden = false;
@@ -839,7 +839,7 @@ async function carregarCadastros(info) {
     procPorCod.clear(); PROC.forEach(p => procPorCod.set(p[0], p));
     cadOk = true; cadVersao = info.atualizadoEm;
     const quando = new Date(info.atualizadoEm).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-    cadStatus(`Lista do NAJ: ${CLI.length.toLocaleString("pt-BR")} clientes e ${PROC.length.toLocaleString("pt-BR")} processos · atualizada em ${quando}`, "ok");
+    cadStatus(`Lista do NAJ: ${CLI.length.toLocaleString("pt-BR")} clientes e ${PROC.length.toLocaleString("pt-BR")} processos ativos · atualizada em ${quando}`, "ok");
     $("syncInfo").textContent = `Cadastros do NAJ atualizados em ${quando}.`;
     mostrarCliente(); mostrarProcesso(); tsMontarProc(); tsInfo();
     if (document.activeElement === $("cliente")) abrirSug();
