@@ -74,9 +74,10 @@ async function todasPaginas(p, campoPagina, campoTotal, colunas, rotulo) {
   const saida = process.argv[2] || '.';
   fs.mkdirSync(saida, { recursive: true });
   const browser = await chromium.launch();
-  const p = await entrar(browser);
+  let p = await entrar(browser);
 
-  // clientes: ativos e inativos
+  // clientes: ativos e inativos (--so-processos reaproveita clientes.json já baixado)
+  if (!process.argv.includes('--so-processos')) {
   await p.locator('img[id^=IMCLIENTECNS]').click();
   await quieto(p);
   const clientes = new Map();
@@ -91,10 +92,11 @@ async function todasPaginas(p, campoPagina, campoTotal, colunas, rotulo) {
   const listaClientes = [...clientes.values()].map(([cod, nome, doc]) => [cod, nome, doc || '']).sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'));
   fs.writeFileSync(path.join(saida, 'clientes.json'), JSON.stringify(listaClientes));
   console.log(`clientes: ${listaClientes.length}`);
+  }
 
-  // processos: fecha a janela de clientes e abre a de processos
-  await p.locator('img[id^=IMFECHARJANELA]').filter({ visible: true }).last().evaluate(e => e.click());
-  await quieto(p);
+  // processos: sessão nova do NAJ, porque a janela de clientes deixa a tela bloqueada
+  await p.context().close();
+  p = await entrar(browser);
   await p.locator('img[id^=IMMENUINFOPROCESSO]').first().click();
   await quieto(p);
   await p.locator('img[id^=IMCODIGOPROCESSO]').click();
