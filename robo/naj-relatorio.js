@@ -112,13 +112,17 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
   const lerLinhas = q => q.$$eval('tr', trs => trs.filter(t => t.offsetParent !== null)
     .map(t => [...t.cells].map(c => c.innerText.trim())).filter(c => c.length >= 8 && /^\d{2}\/\d{2}\/\d{4}/.test(c[3] || '')).map(c => c.slice(3, 8)));
   const chaveDe = ([dataHora, , desc, info, usuario]) => [dataHora, usuario, desc.replace(/\s+/g, ' ').slice(0, 80), info].join('|');
-  async function lerDetalhe(q, i) {
+  async function lerDetalhe(q, i, linha) {
     await q.locator('img[src*="edit-row"]').filter({ visible: true }).nth(i).evaluate(e => e.click());
     await quieto(q);
+    const descTela = await q.locator('textarea[id^=MMDESCRICAO]').filter({ visible: true }).first().inputValue().catch(() => '');
     const v = await q.$$eval('input[type=text],select', els => Object.fromEntries(els.filter(e => e.offsetParent !== null && /^(ED|CB)[A-Z]+\d*$/.test(e.id))
       .map(e => [e.id.replace(/\d+$/, ''), e.tagName === 'SELECT' ? (e.options[e.selectedIndex] || {}).text || '' : e.value])));
     await q.locator('img[id^=IMFECHARJANELA]').filter({ visible: true }).last().evaluate(e => e.click());
     await quieto(q);
+    // confere que abriu a atividade certa: a descrição da tela começa como a da lista
+    const curto = t => t.replace(/\s+/g, ' ').trim().slice(0, 30).replace(/\(\.\.\.\)$/, '');
+    if (curto(descTela) && curto(linha[2]) && !curto(descTela).startsWith(curto(linha[2]).slice(0, 20))) throw new Error(`Atividade aberta não confere com a lista: "${curto(linha[2])}" x "${curto(descTela)}".`);
     const area = (v.CBAREAJURIDICA || '').replace(/^\*.*\*$/, '').trim();
     return { codAtiv: v.EDCODIGOATIVIDADE || '', codProc: v.EDCODIGOPROCESSO || '', areaAtiv: area, tempo: v.EDTEMPOTOTAL || '' };
   }
@@ -141,7 +145,7 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
       const linhas = await lerLinhas(q);
       for (let i = 0; i < linhas.length; i++) {
         const k = chaveDe(linhas[i]);
-        if (!cache[k]) { cache[k] = await lerDetalhe(q, i); lidas++; if (lidas % 50 === 0) { salvarCache(); console.log(`detalhes lidos: ${lidas}`); } }
+        if (!cache[k]) { cache[k] = await lerDetalhe(q, i, linhas[i]); lidas++; if (lidas % 50 === 0) { salvarCache(); console.log(`detalhes lidos: ${lidas}`); } }
         brutas.push([...linhas[i], cache[k]]);
       }
     }
