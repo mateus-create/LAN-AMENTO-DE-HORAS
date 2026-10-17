@@ -17,7 +17,8 @@ Use uma pasta de trabalho nova, por exemplo `$TMP/ciclo-<data-hora>` (chamada ab
 
 1. **Senhas disponíveis.** `env | grep -o '^NAJ_SENHA_[A-Z0-9_]*' | sort` (só os nomes). Se a lista mudou desde a última vez,
    grave em `config/robo` o campo `senhas` com esses nomes (ArtifactData `set`/`update`, com `if_version` se existir).
-2. **Pessoas.** ArtifactData `list` em `equipe` com `out_dir` = `<pasta>` e `get` em `config` / `membros` com o mesmo `out_dir`.
+2. **Pessoas.** ArtifactData `list` em `equipe` com `out_dir` = `<pasta>` e `get` em `config` / `membros` e `config` / `robo` com o mesmo `out_dir`.
+   Contas listadas em `config/robo.contasDoDono` são outras contas do próprio dono (ex.: conta pessoal) e lançam como ele.
 3. **Travados de um ciclo anterior.** Para cada pessoa, `query` em `equipe/<id>/lancamentos` com `where status == processando`.
    Não lance de novo (pode já estar gravado no NAJ): `update` (com `if_version`) para `status: "erro"`,
    `mensagem: "O ciclo anterior foi interrompido durante o lançamento. Confira no NAJ se a atividade já existe; se não existir, toque em Corrigir e salve para devolver à fila."`.
