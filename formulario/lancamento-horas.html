@@ -1273,6 +1273,10 @@ async function carregarNomes(ids) {
   for (const id of faltam) nomes[id] = ps[id] || { name: "", email: null };
 }
 const nomeDe = id => (nomes[id] && (nomes[id].name || nomes[id].email)) || (cfgMembros[id] && cfgMembros[id].najUsuario) || "Pessoa sem nome";
+// outras contas do dono (config/robo.contasDoDono) não aparecem à parte: os lançamentos delas somam aos do dono
+const contaDoDono = id => (cfgRobo.contasDoDono || []).includes(id);
+const pessoasVisiveis = () => membros.filter(m => !contaDoDono(m.id));
+const lancDe = m => [lanEquipe[m.id] || [], ...(m.dono ? membros.filter(x => contaDoDono(x.id)).map(x => lanEquipe[x.id] || []) : [])].flat();
 
 function vigiarAdmin(db) {
   db.collection("equipe").onSnapshot(async s => {
@@ -1286,7 +1290,7 @@ function vigiarAdmin(db) {
   }, () => {});
   db.doc("config/membros").onSnapshot(s => { cfgMembros = (s.exists && s.data().pessoas) || {}; renderAdm(); }, () => {});
   db.doc("config/nucleos").onSnapshot(s => { if (s.exists) cfgNucleos = { lista: NUCLEOS_PADRAO, mapa: {}, ...s.data() }; renderAdm(); }, () => {});
-  db.doc("config/robo").onSnapshot(s => { cfgRobo = s.exists ? s.data() : {}; if (admAba === "pes") renderPessoas(); }, () => {});
+  db.doc("config/robo").onSnapshot(s => { cfgRobo = s.exists ? s.data() : {}; renderAdm(); }, () => {});
   // cada atualização do relatório substitui a leitura anterior inteira (nunca soma uma leitura à outra)
   let leitura = 0;
   db.doc("relatorio/info").onSnapshot(async s => {
@@ -1408,8 +1412,8 @@ $("rCsv").onclick = async () => {
 // lançamentos feitos pelo sistema, por pessoa
 function renderLan() {
   const h = hoje(), sem = inicioSemana();
-  const linhasT = membros.map(m => {
-    const l = lanEquipe[m.id] || [];
+  const linhasT = pessoasVisiveis().map(m => {
+    const l = lancDe(m);
     const c = s => l.filter(r => r.status === s).length;
     const horas = f => l.filter(f).reduce((a, r) => a + durDe(r), 0);
     return { m, fila: c("pendente") + c("processando"), erro: c("erro"), hoje: horas(r => r.status === "lancado" && r.data === h), semana: horas(r => r.status === "lancado" && r.data >= sem), total: l.length };
@@ -1419,7 +1423,7 @@ function renderLan() {
 }
 $("lTabela").addEventListener("click", ev => {
   const tr = ev.target.closest("[data-pessoa]"); if (!tr) return;
-  const id = tr.dataset.pessoa, l = [...(lanEquipe[id] || [])].sort((a, b) => (b.data + b.inicio).localeCompare(a.data + a.inicio)).slice(0, 30);
+  const id = tr.dataset.pessoa, m = membros.find(x => x.id === id) || { id }, l = [...lancDe(m)].sort((a, b) => (b.data + b.inicio).localeCompare(a.data + a.inicio)).slice(0, 30);
   $("lDetTitulo").textContent = nomeDe(id);
   $("lDetLista").innerHTML = l.length ? l.map(r => linha(r, false).replace(/<div class="acts">[\s\S]*?<\/div>/, '<div class="acts"></div>')).join("") : '<div class="empty"><b>Nenhum lançamento.</b></div>';
   $("lDetalhe").hidden = false;
@@ -1431,7 +1435,7 @@ function renderPessoas() {
   if ($("pLista").contains(document.activeElement)) return;
   const usuariosNaj = (relInfo && relInfo.usuarios) || [];
   const senhas = new Set(cfgRobo.senhas || []);
-  $("pLista").innerHTML = membros.length ? membros.map(m => {
+  $("pLista").innerHTML = pessoasVisiveis().length ? pessoasVisiveis().map(m => {
     const c = cfgMembros[m.id] || {};
     const v = c.najLogin ? varSenha(c.najLogin) : "";
     const status = m.dono ? '<span class="ok-t">usa a senha principal do robô</span>' : !v ? '<span class="no-t">informe o login do NAJ</span>' : senhas.has(v) ? '<span class="ok-t">senha configurada</span>' : '<span class="no-t">senha ainda não configurada</span>';
