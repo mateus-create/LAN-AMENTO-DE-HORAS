@@ -17,6 +17,9 @@ Use uma pasta de trabalho nova, por exemplo `$TMP/ciclo-<data-hora>` (chamada ab
 
 1. **Senhas disponíveis.** `env | grep -o '^NAJ_SENHA_[A-Z0-9_]*' | sort` (só os nomes). Se a lista mudou desde a última vez,
    grave em `config/robo` o campo `senhas` com esses nomes (ArtifactData `set`/`update`, com `if_version` se existir).
+   Para cada senha nova (pessoa recém-cadastrada ou senha trocada), teste a credencial antes de lançar:
+   `node robo/naj-lancar.js --testar-login <login> <NAJ_SENHA_...>`. Se o NAJ recusar, diga isso no resumo
+   (o administrador precisa corrigir a senha no ambiente); os itens dessa pessoa vão terminar com a mesma mensagem.
 2. **Pessoas.** Todas as pessoas, não só o dono: ArtifactData `list` em `equipe` com `out_dir` = `<pasta>` e `get` em `config` / `membros` e `config` / `robo` com o mesmo `out_dir`.
    Contas listadas em `config/robo.contasDoDono` são outras contas do próprio dono (ex.: conta pessoal) e lançam como ele.
 3. **Travados de um ciclo anterior.** Para cada pessoa, `query` em `equipe/<id>/lancamentos` com `where status == processando`.
@@ -31,6 +34,9 @@ Use uma pasta de trabalho nova, por exemplo `$TMP/ciclo-<data-hora>` (chamada ab
 6. **Preparar.** `node robo/preparar.js <pasta> <pasta>/entrada.json` (só os `pendente` do arquivo exportado; remova os que falharam no passo 5).
 7. **Lançar.** `node robo/naj-lancar.js <pasta>/entrada.json <pasta>/saida.json --prints <pasta>/prints`
    (sem `--teste`: grava no NAJ, cada um com o próprio login). Cerca de 40 s por lançamento.
+   Se o NAJ recusar o login de uma pessoa, o robô tenta uma única vez e marca todos os itens dela com
+   "O NAJ recusou o login/senha de ..."; não adianta devolver esses itens para `pendente` antes de corrigir a senha.
+   Todo erro guarda um print da tela em `<pasta>/prints/<id>-erro.png` (campo `print` do resultado), para diagnóstico.
 8. **Gravar o resultado.** `node robo/resultados.js <pasta>/entrada.json <pasta>/saida.json <pasta>/upd`; depois ArtifactData `batch`
    com um `update` por arquivo (`collection` = a coleção mostrada, `doc_id`, `file_path`, `if_version` do passo 5).
    Se algum id ficou sem resultado, grave `status: "erro"` com a mensagem do passo 3.
