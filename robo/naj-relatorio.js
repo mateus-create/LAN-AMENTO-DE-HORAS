@@ -9,33 +9,12 @@ const fs = require('fs');
 const path = require('path');
 let chromium;
 try { ({ chromium } = require('playwright')); } catch { ({ chromium } = require('/opt/node22/lib/node_modules/playwright')); }
-const espera = ms => new Promise(r => setTimeout(r, ms));
+const { entrarNoNaj, espera } = require('./naj-comum');
 const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
 const dig = s => (s || '').replace(/\D/g, '');
 
 async function entrar(browser, modulo) {
-  const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
-  const p = await ctx.newPage();
-  p.pendentes = 0;
-  p.on('request', () => p.pendentes++);
-  p.on('requestfinished', () => p.pendentes--);
-  p.on('requestfailed', () => p.pendentes--);
-  await p.goto(process.env.NAJ_URL, { waitUntil: 'networkidle' });
-  await p.fill('#login', process.env.NAJ_USUARIO);
-  await p.fill('#password', process.env.NAJ_SENHA);
-  await p.click('button:has-text("Entrar")');
-  await p.waitForSelector('button.button-acessar-adv');
-  await espera(500);
-  await p.click('button.button-acessar-adv');
-  await p.waitForURL(/najgestaoweb/, { timeout: 30000 });
-  await p.waitForLoadState('networkidle').catch(() => {});
-  await espera(3000);
-  const ok = p.locator('button:visible:has-text("OK")');
-  if (await ok.count()) await ok.first().click();
-  await p.fill('#txtsenha', process.env.NAJ_SENHA);
-  await p.click('#btentrar');
-  await p.waitForLoadState('networkidle').catch(() => {});
-  await espera(5000);
+  const p = await entrarNoNaj(browser, { login: process.env.NAJ_USUARIO, senha: process.env.NAJ_SENHA });
   await p.locator('text="Controles"').first().click();
   await espera(800);
   await p.locator(`text="${modulo}"`).first().click();
