@@ -22,10 +22,11 @@ As duas rotinas (lançamentos e cadastros/relatório) estão DESLIGADAS. Correç
   "Número do Processo" pelo rótulo ao lado dele, sem ids fixos. O `naj-cadastros.js` confere cada situação com o
   "Total de: N Registro(s)" do NAJ e recusa sozinho uma lista menor que 98% dele ou de `--clientes-antes <N>`.
 - Testado sem gravar no NAJ: cliente por nome e processo por número preenchem a tela (`--teste`).
-- Download completo em teste (26/10).
+- Download real em 26/10: clientes ativos 4.923 (o NAJ informa 4.923), contra 15 antes da correção.
 
 ## 3. Relatório diário: parado desde 22/10
-- Os campos usados pelo relatório (lista de atividades e módulo Processos) não mudaram; teste em andamento.
+- Os campos usados pelo relatório (lista de atividades e módulo Processos) não mudaram com a renumeração; a parada
+  coincide com a falha dos cadastros na mesma rotina das 06:45. Conferir na primeira execução depois de religar.
 
 ## Para religar as rotinas
 - Cadastros/relatório: podem voltar (passar `--clientes-antes` com o total de `cadastros/info`, ver `CADASTROS.md`).
