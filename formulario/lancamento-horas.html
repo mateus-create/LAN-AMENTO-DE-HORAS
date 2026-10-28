@@ -241,8 +241,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
 .round:disabled { opacity: .45; cursor: not-allowed }
 .tsgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px }
 .recent { display: flex; gap: 8px; flex-wrap: wrap }
-.recent button { border: 1px solid #3a3f49; background: transparent; color: var(--hero-ink); border-radius: 999px; padding: 7px 12px; font: 600 .78rem var(--sans); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; max-width: 100% }
-.recent button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.recent button { border: 1px solid #3a3f49; background: transparent; color: var(--hero-ink); border-radius: 12px; padding: 8px 12px; font: 600 .78rem var(--sans); cursor: pointer; display: inline-flex; gap: 8px; align-items: center; max-width: 100%; text-align: left }
+.recent button > span { display: grid; gap: 2px; min-width: 0 }
+.recent button span span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.recent button .rec-det { font-weight: 400; opacity: .7; font-size: .72rem }
 .recent button::before { content: "▶"; font-size: .6rem; color: var(--ring) }
 .stopsheet { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 14px }
 .stopsheet .total { font: 800 1.6rem var(--sans) }
@@ -1094,7 +1096,7 @@ async function tsIniciar(base) {
   if (!base.cliente) { toast("Escolha o cliente antes de iniciar."); $("tsCliente").focus(); return; }
   const agoraISO = new Date().toISOString();
   try {
-    await tsAtivoRef.set({ estado: "rodando", cliente: base.cliente, clienteCod: base.clienteCod || "", processoCod: base.processoCod || "", descricao: base.descricao || "", inicio: agoraISO, rodandoDesde: agoraISO, acumuladoMs: 0, segmentos: [] });
+    await tsAtivoRef.set({ estado: "rodando", cliente: base.cliente, clienteCod: base.clienteCod || "", processoCod: base.processoCod || "", descricao: base.descricao || "", area: base.area || "", tipo: base.tipo || "", inicio: agoraISO, rodandoDesde: agoraISO, acumuladoMs: 0, segmentos: [] });
   } catch { toast("Não consegui iniciar. Tente de novo."); }
 }
 $("tStart").onclick = () => tsIniciar({ ...tsSel, descricao: $("tsDesc").value.trim() });
@@ -1207,16 +1209,20 @@ function renderTimer() {
   pinta();
   if (!pausado) tick = setInterval(pinta, 1000);
 }
+// As três últimas atividades lançadas; um toque recomeça a mesma atividade (cliente, processo, descrição, área e tipo).
 function renderRecentes() {
   const vistos = new Set(), lista = [];
-  for (const r of [...registros].sort((a, b) => (b.criadoEm || "").localeCompare(a.criadoEm || ""))) {
-    const k = (r.clienteCod || r.cliente) + "|" + (r.processoCod || "");
+  for (const r of [...registros].sort((a, b) => (b.criadoEm || b.data + b.inicio || "").localeCompare(a.criadoEm || a.data + a.inicio || ""))) {
+    const k = [r.clienteCod || r.cliente, r.processoCod || "", (r.descricao || "").trim().toLowerCase()].join("|");
     if (vistos.has(k)) continue; vistos.add(k); lista.push(r);
-    if (lista.length === 6) break;
+    if (lista.length === 3) break;
   }
   $("tRecentWrap").hidden = !lista.length;
-  $("tRecent").innerHTML = lista.map((r, i) => `<button type="button" data-rec="${i}"><span>${esc(r.cliente)}${r.processoCod ? " · " + esc(r.processoCod) : ""}</span></button>`).join("");
-  $("tRecent").onclick = ev => { const b = ev.target.closest("[data-rec]"); if (b) { const r = lista[+b.dataset.rec]; tsIniciar({ cliente: r.cliente, clienteCod: r.clienteCod, processoCod: r.processoCod, descricao: "" }); } };
+  $("tRecent").innerHTML = lista.map((r, i) => {
+    const det = [r.processoCod ? "Proc. " + r.processoCod : "", r.descricao || ""].filter(Boolean).join(" · ");
+    return `<button type="button" data-rec="${i}" title="${esc(r.cliente + (det ? " — " + det : ""))}"><span><span>${esc(r.cliente)}</span>${det ? `<span class="rec-det">${esc(det)}</span>` : ""}</span></button>`;
+  }).join("");
+  $("tRecent").onclick = ev => { const b = ev.target.closest("[data-rec]"); if (b) { const r = lista[+b.dataset.rec]; tsIniciar({ cliente: r.cliente, clienteCod: r.clienteCod, processoCod: r.processoCod, descricao: r.descricao || "", area: r.area || "", tipo: r.tipo || "" }); } };
 }
 function renderRegistros() {
   const lista = [...registros].sort((a, b) => (b.data + b.inicio).localeCompare(a.data + a.inicio)).slice(0, 40);
