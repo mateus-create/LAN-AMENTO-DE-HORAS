@@ -47,6 +47,8 @@
   color-scheme: dark }
 
 * { box-sizing: border-box }
+/* uma só fonte em tudo (campos, listas, botões, códigos e textos de exemplo); os tamanhos continuam os de cada elemento */
+*, *::before, *::after, ::placeholder, code, kbd, pre, samp, option, optgroup { font-family: var(--sans) !important }
 [hidden] { display: none !important }
 html, body { height: 100% }
 body { background: var(--bg); color: var(--ink); font: 14.5px/1.5 var(--sans); font-variant-numeric: tabular-nums; }
