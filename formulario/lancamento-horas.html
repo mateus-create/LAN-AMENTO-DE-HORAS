@@ -1304,7 +1304,7 @@ let membros = [], cfgMembros = {}, cfgNucleos = { lista: NUCLEOS_PADRAO, mapa: {
 const lanEquipe = {}; // id da pessoa -> lançamentos
 const nucleosLista = () => (cfgNucleos.lista && cfgNucleos.lista.length ? cfgNucleos.lista : NUCLEOS_PADRAO);
 const varSenha = login => "NAJ_SENHA_" + (login || "").toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
-let admAba = "rel";
+let admAba = "rel", relUsuarios = [];
 
 $("admTabs").addEventListener("click", ev => {
   const b = ev.target.closest("[data-adm]"); if (!b) return;
@@ -1343,6 +1343,9 @@ function vigiarAdmin(db) {
   let leitura = 0;
   db.doc("relatorio/info").onSnapshot(async s => {
     const minha = ++leitura, info = s.exists ? s.data() : null, itens = [];
+    // a lista de usuários do NAJ vem pronta no info: a aba Pessoas não precisa esperar o relatório inteiro carregar
+    relUsuarios = (info && info.usuarios) || [];
+    if (admAba === "pes") renderPessoas(true);
     if (info) for (const id of info.documentos || []) {
       try { const d = await db.doc("relatorio/" + id).get(); if (d.exists) itens.push(...d.data().itens); } catch {}
       if (minha !== leitura) return; // chegou uma versão mais nova do relatório
@@ -1661,9 +1664,14 @@ $("lTabela").addEventListener("click", ev => {
 $("lFechar").onclick = () => $("lDetalhe").hidden = true;
 
 // pessoas: ligação com o NAJ e núcleos
-function renderPessoas() {
-  if ($("pLista").contains(document.activeElement)) return;
-  const usuariosNaj = (relInfo && relInfo.usuarios) || [];
+function renderPessoas(soListas) {
+  const usuariosNaj = [...new Set([...relUsuarios, ...relItens.map(a => a[3]), ...Object.values(cfgMembros).map(c => c.najUsuario)].filter(Boolean))].sort((x, y) => x.localeCompare(y, "pt-BR"));
+  const opcoes = atual => `<option value="">Escolha…</option>${usuariosNaj.map(u => `<option ${atual === u ? "selected" : ""}>${esc(u)}</option>`).join("")}`;
+  // alguém está editando: não redesenha os cartões (perderia o que foi digitado), só completa as listas de usuários
+  if ($("pLista").contains(document.activeElement)) {
+    if (soListas) $("pLista").querySelectorAll('select[data-k="najUsuario"]').forEach(sel => { if (sel !== document.activeElement && sel.options.length <= 1) { const v = sel.value || (cfgMembros[sel.closest("[data-p]").dataset.p] || {}).najUsuario || ""; sel.innerHTML = opcoes(v); } });
+    return;
+  }
   const senhas = new Set(cfgRobo.senhas || []);
   $("pLista").innerHTML = pessoasVisiveis().length ? pessoasVisiveis().map(m => {
     const c = cfgMembros[m.id] || {};
@@ -1672,7 +1680,7 @@ function renderPessoas() {
     return `<div class="pessoa" data-p="${esc(m.id)}">
       <div class="topo"><div><b>${esc(nomeDe(m.id))}</b>${nomes[m.id] && nomes[m.id].email ? `<div class="hint">${esc(nomes[m.id].email)}</div>` : ""}</div>${m.dono ? '<span class="pill lancado">Dono</span>' : ""}</div>
       <div class="grade">
-        <div class="field"><label>Usuário no NAJ</label><select data-k="najUsuario"><option value="">Escolha…</option>${usuariosNaj.map(u => `<option ${c.najUsuario === u ? "selected" : ""}>${esc(u)}</option>`).join("")}</select></div>
+        <div class="field"><label>Usuário no NAJ</label><select data-k="najUsuario">${opcoes(c.najUsuario)}</select></div>
         <div class="field"><label>Login do NAJ (e-mail de acesso)</label><input data-k="najLogin" value="${esc(c.najLogin || "")}" autocomplete="off"></div>
         <div class="field"><label>Núcleo principal</label><select data-k="principal"><option value="">Escolha…</option>${nucleosLista().map(n => `<option ${c.principal === n ? "selected" : ""}>${esc(n)}</option>`).join("")}</select></div>
       </div>
