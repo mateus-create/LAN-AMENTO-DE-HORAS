@@ -100,6 +100,20 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
     await quieto(q);
     return q;
   }
+  // campos "Página(s) [n] de [total]" da lista: achados ao lado do rótulo, porque os ids TIWEDITn mudam quando o NAJ
+  // acrescenta campos à tela (em 10/2026 passaram de TIWEDIT3/4 para TIWEDIT5/6)
+  async function paginacao(q) {
+    const ids = await q.evaluate(() => {
+      const rot = [...document.querySelectorAll('body *')].find(e => e.offsetParent && e.childElementCount === 0 && /^P[aá]gina\(s\)$/.test(e.textContent.trim()));
+      if (!rot) return [];
+      const r = rot.getBoundingClientRect();
+      return [...document.querySelectorAll('input')].filter(i => i.offsetParent && i.id && (i.type === 'text' || !i.type))
+        .map(i => [i, i.getBoundingClientRect()]).filter(([, b]) => Math.abs((b.top + b.bottom) / 2 - (r.top + r.bottom) / 2) < 12 && b.left > r.left)
+        .sort((a, b) => a[1].left - b[1].left).slice(0, 2).map(([i]) => '#' + i.id);
+    });
+    if (ids.length < 2) throw new Error('Não achei os campos de página da lista de atividades do NAJ.');
+    return { pagina: ids[0], total: ids[1] };
+  }
   const lerLinhas = q => q.$$eval('tr', trs => trs.filter(t => t.offsetParent !== null)
     .map(t => [...t.cells].map(c => c.innerText.trim())).filter(c => c.length >= 8 && /^\d{2}\/\d{2}\/\d{4}/.test(c[3] || '')).map(c => c.slice(3, 8)));
   const chaveDe = ([dataHora, , desc, info, usuario]) => [dataHora, usuario, desc.replace(/\s+/g, ' ').slice(0, 80), info].join('|');
@@ -132,7 +146,9 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
   const usuarios = await p0.$$eval('#TIWCOMBOBOX1 option', os => os.map(o => o.text.trim()).filter(t => t && !t.startsWith('*') && !t.startsWith('-')));
   const conferePeriodo = [await p0.inputValue('#TIWEDIT1'), await p0.inputValue('#TIWEDIT2')];
   const esperado = Number(((await p0.innerText('body')).match(/Total de:\s*([\d.]+)\s*Registro/) || [])[1]?.replace(/\./g, '')) || 0;
-  const totalPaginas = Number(await p0.inputValue('#TIWEDIT4')) || 1;
+  const pag = await paginacao(p0);
+  const totalPaginas = Number(await p0.inputValue(pag.total)) || 1;
+  console.log(`campos de página: ${pag.pagina} e ${pag.total}`);
   console.log(`atividades no período ${conferePeriodo.join(' a ')}: ${esperado} em ${totalPaginas} páginas; ${Object.keys(cache).length} já lidas antes`);
   await p0.context().close();
 
@@ -144,12 +160,12 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
     q.setDefaultTimeout(20000);
     const pgIni = Number(process.env.PAGINA_INICIAL) || 1, pgFim = Math.min(totalPaginas, Number(process.env.PAGINA_FINAL) || totalPaginas);
     for (let pg = pgIni + t; pg <= pgFim; pg += nTrab) {
-      if (pg > 1) { await q.fill('#TIWEDIT3', String(pg)); await q.press('#TIWEDIT3', 'Enter'); await quieto(q); }
-      if (await q.inputValue('#TIWEDIT3') !== String(pg)) throw new Error(`Não consegui abrir a página ${pg} da lista de atividades.`);
+      if (pg > 1) { await q.fill(pag.pagina, String(pg)); await q.press(pag.pagina, 'Enter'); await quieto(q); }
+      if (await q.inputValue(pag.pagina) !== String(pg)) throw new Error(`Não consegui abrir a página ${pg} da lista de atividades.`);
       let linhas = await lerLinhas(q);
       for (let tent = 0; linhas.length && linhas.every(l => jaVistas.has(chaveDe(l))) && tent < 3; tent++) {
         console.log(`[sessão ${t + 1}] página ${pg} veio igual a uma já lida; abrindo de novo`);
-        await q.fill('#TIWEDIT3', String(pg)); await q.press('#TIWEDIT3', 'Enter'); await quieto(q); await espera(1500);
+        await q.fill(pag.pagina, String(pg)); await q.press(pag.pagina, 'Enter'); await quieto(q); await espera(1500);
         linhas = await lerLinhas(q);
       }
       if (linhas.length && linhas.every(l => jaVistas.has(chaveDe(l)))) throw new Error(`A página ${pg} da lista de atividades repete outra já lida.`);
@@ -163,7 +179,7 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
           let det = null;
           for (let tent = 0; tent < 3 && !det; tent++) {
             det = await lerDetalhe(q, i, linhas[i]);
-            if (!det) { await q.fill('#TIWEDIT3', String(pg)); await q.press('#TIWEDIT3', 'Enter'); await quieto(q); const novas = await lerLinhas(q); if (!novas[i] || chaveDe(novas[i]) !== k) break; }
+            if (!det) { await q.fill(pag.pagina, String(pg)); await q.press(pag.pagina, 'Enter'); await quieto(q); const novas = await lerLinhas(q); if (!novas[i] || chaveDe(novas[i]) !== k) break; }
           }
           if (det) { cache[k] = det; lidas++; if (lidas % 50 === 0) { salvarCache(); console.log(`detalhes lidos: ${lidas}`); } }
           else { naoConferidas++; brutas.push([...linhas[i], { codAtiv: '', codProc: '', areaAtiv: '', tempo: '' }]); continue; }

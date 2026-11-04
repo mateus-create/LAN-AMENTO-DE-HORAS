@@ -4,6 +4,8 @@
 // Uso: node robo/naj-tipos.js <pasta de saída> <mês inicial AAAA-MM> [mês final AAAA-MM]
 // Gera <pasta>/tipos.json: { "AAAA-MM": { porCodigo: {código: tipo}, porChave: {"AAAA-MM-DD|HH:MM|USUÁRIO": tipo},
 //   minutos: {tipo: minutos} } } com tipo = "CF" | "PR" | "AD". Precisa do pdftotext (poppler-utils).
+// Os PDFs ficam em <pasta>/pdf; um PDF já baixado não é pedido de novo (dá para retomar depois de uma interrupção).
+// --so-pdfs: só remonta o tipos.json com os PDFs já baixados, sem entrar no NAJ.
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
@@ -40,7 +42,8 @@ function lerPdf(arq) {
   for (let [a, m] = mesIni.split('-').map(Number); `${a}-${doisDig(m)}` <= mesFim; m === 12 ? (a++, m = 1) : m++) meses.push(`${a}-${doisDig(m)}`);
   fs.mkdirSync(path.join(saida, 'pdf'), { recursive: true });
 
-  const browser = await chromium.launch();
+  const soPdfs = process.argv.includes('--so-pdfs');
+  const browser = soPdfs ? null : await chromium.launch();
   // depois de gerar um PDF a tela do NAJ trava (some o menu): cada relatório usa uma sessão nova
   let p = null;
   const quieto = async () => { await espera(300); for (let i = 0; i < 200 && p.pendentes > 0; i++) await espera(100); await espera(500); };
@@ -59,6 +62,17 @@ function lerPdf(arq) {
     const ultimo = new Date(a, m, 0).getDate();
     const r = resultado[mes] = { porCodigo: {}, porChave: {}, minutos: {} };
     for (const [tipo, cod] of Object.entries(TIPOS)) {
+      const arq = path.join(saida, 'pdf', `${mes}-${tipo}.pdf`);
+      if (fs.existsSync(arq) || soPdfs) {
+        if (!fs.existsSync(arq)) { console.log(`${mes} ${NOMES[tipo]}: PDF não baixado`); continue; }
+        for (const it of lerPdf(arq)) {
+          r.porCodigo[it.cod] = tipo;
+          if (it.data && it.hora && it.usuario) r.porChave[`${it.data}|${it.hora}|${it.usuario}`] = tipo;
+          r.minutos[tipo] = (r.minutos[tipo] || 0) + it.min;
+        }
+        console.log(`${mes} ${NOMES[tipo]}: ${Object.values(r.porCodigo).filter(t => t === tipo).length} atividades (PDF já baixado)`);
+        continue;
+      }
       await abrirTela();
       await p.fill('#EDCODTIPO', cod); await p.press('#EDCODTIPO', 'Tab'); await quieto();
       const nome = await p.inputValue('#EDTIPO');
@@ -66,7 +80,6 @@ function lerPdf(arq) {
       await p.fill('#EDDATACADASTROINI', `01/${doisDig(m)}/${a}`); await p.press('#EDDATACADASTROINI', 'Tab'); await quieto();
       await p.fill('#EDDATACADASTROFIM', `${ultimo}/${doisDig(m)}/${a}`); await p.press('#EDDATACADASTROFIM', 'Tab'); await quieto();
       await p.check('#IWRADIOGROUP1_INPUT_2'); await quieto(); // Analítico (o sintético não traz o código da atividade)
-      const arq = path.join(saida, 'pdf', `${mes}-${tipo}.pdf`);
       // o NAJ gera o PDF em /files/Relatorio_idN.pdf; às vezes como download, às vezes numa aba nova
       const pdfUrl = new Promise(res => {
         const ver = r => { if (/\/files\/Relatorio_id\d+\.pdf/i.test(r.url())) { p.context().off('response', ver); res(r.url()); } };
@@ -94,7 +107,7 @@ function lerPdf(arq) {
       console.log(`${mes} ${NOMES[tipo]}: ${itens.length} atividades`);
     }
   }
-  await browser.close();
+  if (browser) await browser.close();
   fs.writeFileSync(path.join(saida, 'tipos.json'), JSON.stringify(resultado));
   console.log(`tipos.json: ${meses.length} meses`);
 })().catch(e => { console.error(e.message); process.exit(1); });

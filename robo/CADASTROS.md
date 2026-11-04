@@ -36,6 +36,8 @@ O formulário não acessa o NAJ diretamente, então esta cópia precisa ser reno
    não pode ter ficado com menos itens; se ficou, não grave e avise. Áreas novas: liste as áreas de `info.areas`
    e `info.areasAtividade` que não estavam no `info` anterior e não estão em `config/nucleos` (`mapa` / `mapaAtividade`).
    O relatório roda logo depois da atualização de cadastros das 06:45 (mesma sessão), para não usar o NAJ em paralelo.
+5. Tipos de hora dos mesmos meses (do mês passado até o atual), depois do passo 3: siga a seção "Tipos de hora" abaixo.
+   Se falhar, não grave os tipos (os meses anteriores continuam valendo) e avise.
 
 ## Tipos de hora (Contratos Fixos, Propostas, Administrativas)
 
