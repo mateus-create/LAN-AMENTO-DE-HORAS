@@ -1,7 +1,7 @@
 <title>Lançamento de Horas NAJ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
 <style>
 /* Layout: painel de escritório — barra lateral escura fixa (no celular vira barra inferior), área clara com cabeçalho escuro de perfil, cartões de números e lista em formato pipeline */
 :root {
@@ -33,18 +33,6 @@
   --mono: var(--sans);
   --r: 14px;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #0c0e11; --surface: #15181d; --sunken: #1b1f25; --ink: #e8ebf0; --muted: #98a2b3; --line: #262b33;
-  --side: #08090b; --side-hover: #16191e; --hero: #1b1f26;
-  --accent: #e8ebf0; --accent-ink: #0c0e11;
-  --ok: #4ade80; --ok-soft: #12291c; --warn: #f3b447; --warn-soft: #2e2311; --bad: #ff8a80; --bad-soft: #351816; --wait: #9db4f0; --wait-soft: #1a2238;
-  color-scheme: dark } }
-:root[data-theme="dark"] {
-  --bg: #0c0e11; --surface: #15181d; --sunken: #1b1f25; --ink: #e8ebf0; --muted: #98a2b3; --line: #262b33;
-  --side: #08090b; --side-hover: #16191e; --hero: #1b1f26;
-  --accent: #e8ebf0; --accent-ink: #0c0e11;
-  --ok: #4ade80; --ok-soft: #12291c; --warn: #f3b447; --warn-soft: #2e2311; --bad: #ff8a80; --bad-soft: #351816; --wait: #9db4f0; --wait-soft: #1a2238;
-  color-scheme: dark }
 
 * { box-sizing: border-box }
 /* uma só fonte em tudo (campos, listas, botões, códigos e textos de exemplo); os tamanhos continuam os de cada elemento */
@@ -300,8 +288,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
 .ind-head span { background: var(--sunken); border-radius: 10px; padding: 8px 12px; font-size: .8rem; color: var(--muted) }
 .ind-head b { color: var(--ink); font-size: .95rem; display: block }
 .viz { --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; position: relative }
-@media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) .viz { --s1: #3987e5; --s2: #d95926; --s3: #199e70 } }
-:root[data-theme="dark"] .viz { --s1: #3987e5; --s2: #d95926; --s3: #199e70 }
 .viz svg { width: 100%; height: auto; display: block; overflow: visible }
 .viz .grid { stroke: var(--line); stroke-width: 1 }
 .viz .ax { fill: var(--muted); font-size: 11px }
@@ -350,6 +336,125 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
   .hero .btn { width: 100% }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+
+/* ---------- Visual estilo Apple: cores clássicas do iPhone, sempre claro; vidro só nas barras e botões ---------- */
+:root {
+  color-scheme: light;
+  --f-display: "EB Garamond", Garamond, "Times New Roman", serif;
+  --f-body: "Plus Jakarta Sans", "Segoe UI", Roboto, Arial, sans-serif;
+  --sans: var(--f-body); --mono: var(--f-body);
+  --bg: #F2F2F7; --surface: #FFFFFF; --sunken: #EBEBF0; --ink: #1C1C1E; --muted: #6C6C70; --line: rgba(60,60,67,.13);
+  --side: rgba(255,255,255,.62); --side-ink: #1C1C1E; --side-muted: #6C6C70; --side-hover: rgba(60,60,67,.07);
+  --hero: #0A84FF; --hero-ink: #FFFFFF; --hero-muted: rgba(255,255,255,.82);
+  --grad: linear-gradient(135deg, #0A84FF 0%, #5E5CE6 100%);
+  --accent: #007AFF; --accent-ink: #FFFFFF;
+  --ok: #248A3D; --ok-soft: rgba(52,199,89,.13);
+  --warn: #8A6100; --warn-soft: rgba(255,225,90,.38);
+  --bad: #D70015; --bad-soft: rgba(255,59,48,.10);
+  --wait: #5856D6; --wait-soft: rgba(88,86,214,.11);
+  --rose: #D6336C; --rose-soft: rgba(255,45,85,.10);
+  --ring: #34C759;
+  --r: 20px;
+  --sombra: 0 1px 2px rgba(0,0,0,.04), 0 6px 20px rgba(0,0,0,.05);
+  --vidro: blur(24px) saturate(180%);
+}
+html { background: #F2F2F7 }
+body { background: transparent; font: 15px/1.45 var(--f-body); font-variant-numeric: tabular-nums }
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(50% 40% at 0% 0%, rgba(0,122,255,.10), transparent 70%),
+              radial-gradient(45% 40% at 100% 100%, rgba(175,82,222,.08), transparent 70%), #F2F2F7 }
+
+/* letras: EB Garamond nos títulos, Plus Jakarta Sans no resto */
+h1, h2, h3, .logo b, .hero-txt b, .avatar { font-family: var(--f-display) !important; font-weight: 700 }
+h1 { font-size: clamp(30px, 6vw, 36px); letter-spacing: -.01em; line-height: 1.1 }
+h2 { font-size: clamp(23px, 4.6vw, 30px); line-height: 1.12; letter-spacing: -.005em }
+.logo b { font-size: 27px; line-height: 1 }
+.hero-txt b { font-size: clamp(32px, 7vw, 40px); line-height: 1.05; letter-spacing: -.01em; display: block }
+.avatar { font-size: 1.35rem }
+.kpi b, .ring b, .dur-box b, .stopsheet .total, .clockface, .row .dur, .mtx .tot td, .ind-tab tr.tot td { font-weight: 600 }
+
+/* cartões brancos e lisos */
+.card, .kpi, .stopsheet, .pessoa { border-radius: 20px; border-color: transparent; box-shadow: var(--sombra) }
+.kpi { transition: transform .55s var(--mola), box-shadow .25s ease }
+
+/* cartões de destaque: degradê azul → roxo, texto branco */
+.hero, .progress, .talk, .timer, .dur-box, .ind-tab th.grp { background: var(--grad); color: #fff }
+.hero, .progress, .talk, .timer { border-radius: 20px; box-shadow: 0 8px 28px rgba(10,132,255,.22) }
+.progress { --ring: #FFFFFF }
+.progress h2 { color: #fff }
+.ring svg circle:first-child { stroke: rgba(255,255,255,.28) }
+.legend div:nth-child(2) i { background: rgba(255,255,255,.5) !important }
+.legend div:nth-child(3) i { background: #FFB3C1 !important }
+.avatar { background: rgba(255,255,255,.22); border: 2px solid rgba(255,255,255,.55); color: #fff }
+.pessoa .avatar { background: var(--grad); border-color: transparent }
+.btn.light { background: #fff; color: #007AFF }
+.talk-ico { background: rgba(255,255,255,.22) }
+.talk textarea, .timer input, .timer select, .timer textarea { background: rgba(255,255,255,.18); color: #fff; border-color: rgba(255,255,255,.32) }
+.talk textarea::placeholder, .timer input::placeholder, .timer textarea::placeholder { color: rgba(255,255,255,.72) }
+.timer option { color: #1C1C1E }
+.dictate { background: rgba(255,255,255,.16) }
+.talk .ghost, .dur-box button, .recent button { background: rgba(255,255,255,.16); color: #fff; border-color: rgba(255,255,255,.45) }
+.talk-msg.bad, .dur-box.badtime b { color: #FFD1D9 } .talk-msg.ok { color: #fff }
+.recent button::before { color: #fff }
+.round.go { background: #fff; color: #007AFF; box-shadow: 0 6px 18px rgba(0,0,0,.12) }
+.round.pause { background: rgba(255,255,255,.22); color: #fff }
+.round.stop { background: #FF3B30; color: #fff }
+.timer .sug { color: var(--ink) }
+
+/* destaque azul da Apple */
+.link { color: #007AFF } .link:hover { color: #0062CC }
+.btn { background: #007AFF; color: #fff; border-radius: 12px }
+button:focus-visible, .seg-tabs button:focus-visible, .types label:has(input:focus-visible) { outline-color: #007AFF }
+input:focus, select:focus, textarea:focus { outline-color: #007AFF }
+.types label:has(input:checked) { border-color: #007AFF; box-shadow: inset 0 0 0 1px #007AFF; background: rgba(0,122,255,.10) }
+.byclient i::after { background: #007AFF }
+.wk .today { outline-color: #007AFF }
+.switch input:checked { background: #34C759 }
+.viz { --s1: #007AFF; --s2: #5856D6; --s3: #D6336C }
+.pill.processando { color: #3A3000; background: rgba(255,225,90,.55) }
+.toast { border-radius: 14px }
+
+/* vidro (Liquid Glass) só nas barras e botões */
+.side, .ghost, .chips button, .seg-tabs, .btn, .round, .proclist button { -webkit-backdrop-filter: var(--vidro); backdrop-filter: var(--vidro) }
+.ghost, .chips button, .proclist button { background: rgba(255,255,255,.62); border-color: rgba(60,60,67,.14) }
+.ghost.danger { color: var(--bad); border-color: rgba(215,0,21,.45) }
+.seg-tabs { background: rgba(118,118,128,.12); border-radius: 12px }
+.seg-tabs button[aria-pressed="true"] { background: #007AFF; color: #fff; box-shadow: 0 2px 8px rgba(0,122,255,.25) }
+.side { margin: 12px 0 12px 12px; height: calc(100vh - 24px); top: 12px; border: 1px solid rgba(255,255,255,.75); border-radius: 26px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 10px 30px rgba(0,0,0,.08) }
+.side-foot { border-top-color: var(--line) }
+.nav button { border-radius: 12px }
+.nav button[aria-current="page"] { background: rgba(0,122,255,.12); color: #007AFF; font-weight: 600 }
+@media (max-width: 860px) {
+  /* barra de baixo flutuante, de vidro, como no iOS */
+  .side { margin: 0; top: auto; left: 10px; right: 10px; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); height: auto; padding: 6px; border-radius: 28px;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.45); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 6px 18px rgba(0,0,0,.05);
+    -webkit-backdrop-filter: blur(5px) saturate(180%); backdrop-filter: blur(5px) saturate(180%) }
+  .nav button { border-radius: 22px }
+  main { padding-block: 16px 118px }
+}
+
+/* animação "mola" (spring) da Apple: passa um pouco do ponto e volta */
+:root { --mola: cubic-bezier(.34, 1.45, .64, 1) }
+@supports (transition-timing-function: linear(0, 1)) { :root { --mola: linear(0, 0.052, 0.179, 0.342, 0.512, 0.67, 0.805, 0.911, 0.989, 1.041, 1.07, 1.082, 1.082, 1.074, 1.062, 1.047, 1.034, 1.021, 1.011, 1.004, 0.998, 0.995, 0.993, 0.993, 0.994, 0.996, 0.998, 0.999, 1) } }
+@keyframes vidroEntra { from { opacity: 0; filter: blur(10px); transform: translateY(14px) scale(.985) } to { opacity: 1; filter: none; transform: none } }
+@keyframes molaPulo { 0% { transform: scale(.8) } 100% { transform: scale(1) } }
+/* ao trocar de tela, os cartões surgem do desfoque, um depois do outro */
+.view > div > *, .view .kpis > *, .view .grid2 > * { animation: vidroEntra .7s var(--mola) backwards }
+.view > div > :nth-child(2), .view .kpis > :nth-child(2), .view .grid2 > :nth-child(2) { animation-delay: .07s }
+.view > div > :nth-child(3), .view .kpis > :nth-child(3) { animation-delay: .14s }
+.view > div > :nth-child(4), .view .kpis > :nth-child(4) { animation-delay: .21s }
+.view > div > :nth-child(n+5) { animation-delay: .28s }
+/* ao tocar, botões e cartões afundam e voltam com a mola */
+button, .kpi, .card, .types label { transition: transform .55s var(--mola), background-color .2s ease, box-shadow .25s ease, opacity .2s ease, color .2s ease }
+button:active:not(:disabled), .types label:active { transform: scale(.94); transition-duration: .12s }
+.nav button[aria-current="page"] svg { animation: molaPulo .6s var(--mola) both }
+/* no computador: o cartão sobe 2px quando o mouse passa por cima (menos os que têm formulário) */
+@media (hover: hover) {
+  .kpi:hover, .card:not(form):not(.filtros-rel):not(.talk):not(details):hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(0,0,0,.05), 0 12px 30px rgba(0,0,0,.08) }
+  .kpi:hover { border-color: transparent }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important } }
 </style>
 
 <div class="shell">
