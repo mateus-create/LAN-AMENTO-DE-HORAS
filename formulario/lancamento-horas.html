@@ -282,6 +282,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--wait); outl
 .passos { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; font-size: .86rem }
 .pessoa { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); margin-bottom: 10px }
 .pessoa .topo { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center }
+.pessoa .quem { display: flex; align-items: center; gap: 12px; min-width: 0 }
+.pessoa .avatar { width: 46px; height: 46px; font-size: .9rem; border-color: var(--line) }
 .pessoa .grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px }
 .nucs { display: flex; flex-wrap: wrap; gap: 6px }
 .nucs label { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; font-size: .8rem; cursor: pointer }
@@ -1664,6 +1666,12 @@ $("lTabela").addEventListener("click", ev => {
 $("lFechar").onclick = () => $("lDetalhe").hidden = true;
 
 // pessoas: ligação com o NAJ e núcleos
+// foto da pessoa (pelo nome da conta ou pelo usuário do NAJ); sem foto, as iniciais
+function avatarDe(id, c) {
+  const nome = nomeDe(id), foto = fotoDoPerfil(nome) || (c.najUsuario ? fotoDoPerfil(c.najUsuario) : null);
+  const ini = nome.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map(x => x[0]).join("").toUpperCase();
+  return `<div class="avatar">${foto ? `<img src="${foto}" alt="">` : esc(ini)}</div>`;
+}
 function renderPessoas(soListas) {
   const usuariosNaj = [...new Set([...relUsuarios, ...relItens.map(a => a[3]), ...Object.values(cfgMembros).map(c => c.najUsuario)].filter(Boolean))].sort((x, y) => x.localeCompare(y, "pt-BR"));
   const opcoes = atual => `<option value="">Escolha…</option>${usuariosNaj.map(u => `<option ${atual === u ? "selected" : ""}>${esc(u)}</option>`).join("")}`;
@@ -1678,7 +1686,7 @@ function renderPessoas(soListas) {
     const v = c.najLogin ? varSenha(c.najLogin) : "";
     const status = m.dono ? '<span class="ok-t">usa a senha principal do robô</span>' : !v ? '<span class="no-t">informe o login do NAJ</span>' : senhas.has(v) ? '<span class="ok-t">senha configurada</span>' : '<span class="no-t">senha ainda não configurada</span>';
     return `<div class="pessoa" data-p="${esc(m.id)}">
-      <div class="topo"><div><b>${esc(nomeDe(m.id))}</b>${nomes[m.id] && nomes[m.id].email ? `<div class="hint">${esc(nomes[m.id].email)}</div>` : ""}</div>${m.dono ? '<span class="pill lancado">Dono</span>' : ""}</div>
+      <div class="topo"><div class="quem">${avatarDe(m.id, c)}<div><b>${esc(nomeDe(m.id))}</b>${nomes[m.id] && nomes[m.id].email ? `<div class="hint">${esc(nomes[m.id].email)}</div>` : ""}</div></div>${m.dono ? '<span class="pill lancado">Dono</span>' : ""}</div>
       <div class="grade">
         <div class="field"><label>Usuário no NAJ</label><select data-k="najUsuario">${opcoes(c.najUsuario)}</select></div>
         <div class="field"><label>Login do NAJ (e-mail de acesso)</label><input data-k="najLogin" value="${esc(c.najLogin || "")}" autocomplete="off"></div>
