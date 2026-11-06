@@ -752,7 +752,7 @@ function atualizarDur() {
 ["inicio", "termino"].forEach(id => $(id).addEventListener("input", atualizarDur));
 $("agora").onclick = () => { $("termino").value = agora(); atualizarDur(); };
 $("cancelEdit").onclick = () => { limpar(); ir("lista"); };
-$("limparBtn").onclick = limpar;
+$("limparBtn").onclick = () => { limpar(); limparConversa(); };
 
 function lerForm() {
   return {
