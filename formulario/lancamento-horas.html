@@ -799,10 +799,12 @@ $("form").addEventListener("submit", async ev => {
     if (editId) {
       await col.doc(editId).update(corpo);
       toast("Lançamento corrigido e devolvido à fila.");
+      limparConversa();
       limpar(); ir("lista");
     } else {
       await col.add({ ...corpo, criadoEm: agoraISO });
       toast("Enviado para a fila. O robô lança na próxima verificação.");
+      limparConversa();
       const manter = { area: v.area, tipo: v.tipo, data: v.data, termino: v.termino };
       limpar();
       // o próximo lançamento costuma repetir área, tipo e data, e começar onde o anterior terminou
@@ -1015,6 +1017,8 @@ $("cadRetry").onclick = async () => {
 let sample = null;
 const ontem = () => { const d = new Date(); d.setDate(d.getDate() - 1); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
 const hhmm = m => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+// depois de enviar, a transcrição do áudio é apagada para o próximo relato não reaproveitar o texto anterior
+function limparConversa() { $("talkTxt").value = ""; talkMsg(""); }
 function talkMsg(t, cls) { $("talkMsg").textContent = t; $("talkMsg").className = "talk-msg" + (cls ? " " + cls : ""); }
 $("talkBtn").onclick = async () => {
   const txt = $("talkTxt").value.trim();
