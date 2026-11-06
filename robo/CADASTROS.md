@@ -36,3 +36,19 @@ O formulário não acessa o NAJ diretamente, então esta cópia precisa ser reno
    não pode ter ficado com menos itens; se ficou, não grave e avise. Áreas novas: liste as áreas de `info.areas`
    e `info.areasAtividade` que não estavam no `info` anterior e não estão em `config/nucleos` (`mapa` / `mapaAtividade`).
    O relatório roda logo depois da atualização de cadastros das 06:45 (mesma sessão), para não usar o NAJ em paralelo.
+5. Tipos de hora dos mesmos meses (do mês passado até o atual), depois do passo 3: siga a seção "Tipos de hora" abaixo.
+   Se falhar, não grave os tipos (os meses anteriores continuam valendo) e avise.
+
+## Tipos de hora (Contratos Fixos, Propostas, Administrativas)
+
+A lista de atividades do NAJ não mostra o tipo. O tipo vem do relatório "Relatórios → Atividades" (analítico, um por tipo e por mês),
+que traz o código de cada atividade. Só leitura; cada relatório abre uma sessão nova do NAJ (a tela trava depois de gerar um PDF), ~40 s cada.
+
+1. `node robo/naj-tipos.js <pasta>/tipos <AAAA-MM inicial> [AAAA-MM final]` (precisa do `pdftotext`). Rode em segundo plano.
+2. `node robo/tipos-para-formulario.js <pasta>/tipos/tipos.json <pasta>/tipos/docs <ids atuais de relatorio/info.tipos, separados por vírgula>`.
+3. Grave cada `t-AAAA-MM.json` em `relatorio` (`set`, `if_version` quando já existir) e, por último, `update` em `relatorio/info`
+   com o campo `tipos` de `tipos-info.json`. O `relatorio-para-formulario.js` mantém esse campo quando regrava o `info`.
+
+A aba Equipe → Relatórios → "Indicadores dos núcleos" junta o tipo a cada hora pelo código da atividade.
+O núcleo de cada hora é o da pessoa que lançou (aba Pessoas ou quadro "Núcleo de cada pessoa do NAJ");
+quem tem mais de um núcleo é dividido pela área do processo. Responsável e integrantes por mês ficam em `config/nucleos.equipe`.

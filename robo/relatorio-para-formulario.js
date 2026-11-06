@@ -34,6 +34,8 @@ fs.writeFileSync(path.join(saida, 'info.json'), JSON.stringify({
   ate: [infoAtual.ate, datas[datas.length - 1]].filter(Boolean).sort().pop() || null,
   atualizadoEm: new Date().toISOString(),
   documentos: [...mantidos, ...novos].sort(),
+  // tipos das atividades (Contratos Fixos / Propostas / Administrativas), gravados à parte pelo tipos-para-formulario.js
+  tipos: infoAtual.tipos || [],
   usuarios: [...new Set([...(infoAtual.usuarios || []), ...ler(path.join(entrada, 'usuarios.json'))])].sort(),
   areas: ler(path.join(entrada, 'areas.json')),
   areasAtividade: juntarAreas(fs.existsSync(path.join(entrada, 'areas-atividade.json')) ? ler(path.join(entrada, 'areas-atividade.json')) : [], infoAtual.areasAtividade || []),
