@@ -10,7 +10,7 @@ Há dois modos (`robo/naj-cadastros.js`), ambos só leitura no NAJ:
   do NAJ**. Se não bater (algum processo foi baixado ou reativado), ele lê todos os processos. Os clientes vêm em ordem alfabética
   e não dá para pegar só os novos; o robô confere os totais Ativo/Inativo do NAJ e se o cliente de cada processo novo já está
   na lista. Se algo mudou, lê todos os clientes.
-- **Completo** (`--completo`, cerca de 20 minutos): lê tudo. Pega o que o rápido não vê porque não muda os totais
+- **Completo** (`--completo`, cerca de 16 minutos): lê tudo. Pega o que o rápido não vê porque não muda os totais
   (nome de cliente corrigido, número de processo alterado, um processo baixado e outro reativado no mesmo intervalo).
   Rode uma vez por dia (execução das 12:45).
 

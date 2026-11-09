@@ -4,4 +4,4 @@
 - `robo/naj-lancar.js`: robô que entra no NAJ e cria a atividade em Controles → Atividades → Nova Atividade.
 - `robo/CICLO.md`: passo a passo do ciclo de hora em hora (fila do formulário → NAJ → status de volta no formulário).
 - Aba "Timesheet" do formulário: cronômetro (iniciar, pausar, parar) vinculado a cliente e processo, guardado em `timesheet/ativo` e `timesheet_registros`; cada registro pode ser enviado à fila do NAJ.
-- `robo/naj-cadastros.js` e `robo/CADASTROS.md`: cópia diária da lista de clientes e processos do NAJ para o formulário sugerir nomes.
+- `robo/naj-cadastros.js`, `robo/cadastros-anteriores.js` e `robo/CADASTROS.md`: cópia da lista de clientes e processos do NAJ para o formulário sugerir nomes (modo rápido só com os processos novos; completo uma vez por dia).
