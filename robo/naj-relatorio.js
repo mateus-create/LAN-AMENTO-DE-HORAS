@@ -59,6 +59,7 @@ async function quieto(p) {
   };
   await percorrerPaginas({
     rotulo: 'processos', quieto, abrir: abrirProcessos,
+    assinatura: async p => (await p.$$eval('tr', trs => { const t = trs.find(t => t.offsetParent !== null && t.cells.length >= 10 && /^\d+$/.test((t.cells[1] || {}).innerText || '')); return t ? t.cells[1].innerText.trim() : ''; })),
     porPagina: async (p, pg) => {
       const linhas = await p.$$eval('tr', trs => trs.filter(t => t.offsetParent !== null)
         .map(t => [...t.cells].map(c => c.innerText.trim())).filter(c => c.length >= 10 && /^\d+$/.test(c[1])));
@@ -209,6 +210,7 @@ async function quieto(p) {
     };
     // a página só entra no resultado depois de lida inteira: se a sessão cair no meio, ela é lida de novo
     await percorrerPaginas({ rotulo: `[sessão ${t + 1}]`, quieto, abrir, de: pgIni + t, ate: pgFim, passo: nTrab, limitePagina: 150000,
+      assinatura: async q => { const l = (await lerLinhas(q))[0]; return l ? chaveDe(l) : ''; },
       porPagina: async (q, pg) => {
       let linhas = await lerLinhas(q);
       for (let tent = 0; linhas.length && linhas.every(l => jaVistas.has(chaveDe(l))) && tent < 3; tent++) {

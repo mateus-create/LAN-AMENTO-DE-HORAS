@@ -55,6 +55,7 @@ const totalProcessos = async p => numero(((await p.innerText('body')).match(/Tot
 const lerProcessos = p => p.$$eval('tr', trs => trs.filter(t => t.offsetParent !== null)
   .map(t => [...t.cells].map(c => c.innerText.trim()))
   .filter(c => c.length >= 10 && /^\d+$/.test(c[1])));
+const assinaturaProcessos = async p => ((await lerProcessos(p))[0] || [])[1] || '';
 const registroProcesso = c => {
   const cliente = c[3].replace(/\s*\([^)]*\)\s*$/, '');
   const local = [c[7], c[8]].filter(x => x && x !== '-').join(' - ');
@@ -66,7 +67,7 @@ async function todosProcessos(browser) {
   const codigos = new Map();
   let esperado = 0;
   await percorrerPaginas({
-    rotulo: 'processos ativos', quieto,
+    rotulo: 'processos ativos', quieto, assinatura: assinaturaProcessos,
     abrir: async () => { const l = await abrirProcessos(browser); esperado = await totalProcessos(l.p); return l; },
     porPagina: async (p, pg) => {
       for (const c of await lerProcessos(p)) codigos.set(c[1], registroProcesso(c));
@@ -89,7 +90,7 @@ async function processosNovos(browser, anteriores) {
   const novos = new Map();
   let total = 0;
   await percorrerPaginas({
-    rotulo: 'processos novos', quieto,
+    rotulo: 'processos novos', quieto, assinatura: assinaturaProcessos,
     abrir: async () => { const l = await abrirProcessos(browser); total = await totalProcessos(l.p); return l; },
     porPagina: async p => {
       const linhas = await lerProcessos(p);
@@ -135,7 +136,7 @@ async function todosClientes(browser) {
   for (const situacao of ['Ativo', 'Inativo']) {
     const vistos = new Map();
     await percorrerPaginas({
-      rotulo: `clientes ${situacao}`, quieto,
+      rotulo: `clientes ${situacao}`, quieto, assinatura: async p => ((await linhasClientes(p))[0] || [])[0] || '',
       abrir: () => abrirClientes(browser, situacao),
       porPagina: async (p, pg) => {
         for (const l of await linhasClientes(p)) vistos.set(l[0], l);
