@@ -3,13 +3,17 @@
 // Uso: node robo/naj-relatorio.js <pasta de saída> <data inicial DD/MM/AAAA> [data final DD/MM/AAAA]
 // Gera atividades.json [[dataISO, "HH:MM", minutos, usuário, cliente, número do processo, área do processo, descrição, parte contrária,
 //   área jurídica da atividade, código do processo, código da atividade], ...]
-// Opções: --cache <arquivo> (detalhes já lidos, reaproveitados entre execuções), --paralelo <n> (sessões simultâneas, padrão 3).
+// Opções: --cache <arquivo> (detalhes já lidos, reaproveitados entre execuções), --paralelo <n> (sessões simultâneas, padrão 1),
+//   --semente <pasta> (documentos m-AAAA-MM-N.json da coleção "relatorio", baixados com ArtifactData `list` + `out_dir`):
+//   as atividades já gravadas no formulário não são abertas de novo, a não ser que sejam dos últimos --reler-dias dias
+//   (padrão 7) ou que o tempo na lista do NAJ seja diferente do gravado. Sem a semente, cada atividade é aberta uma a uma.
+// Se a tela travar, a sessão cair ou uma página demorar demais, o robô entra de novo no NAJ e continua da mesma página.
 // e usuarios.json (usuários ativos do NAJ). Só pesquisa: nada é gravado no NAJ.
 const fs = require('fs');
 const path = require('path');
 let chromium;
 try { ({ chromium } = require('playwright')); } catch { ({ chromium } = require('/opt/node22/lib/node_modules/playwright')); }
-const { entrarNoNaj, espera } = require('./naj-comum');
+const { entrarNoNaj, espera, percorrerPaginas } = require('./naj-comum');
 const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
 const dig = s => (s || '').replace(/\D/g, '');
 
@@ -25,16 +29,6 @@ async function quieto(p) {
   await espera(300);
   for (let i = 0; i < 200 && p.pendentes > 0; i++) await espera(100);
   await espera(400);
-}
-async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
-  const total = Number(await p.inputValue(campoTotal)) || 1;
-  const itens = [];
-  for (let pg = 1; pg <= total; pg++) {
-    if (pg > 1) { await p.fill(campoPagina, String(pg)); await p.press(campoPagina, 'Enter'); await quieto(p); }
-    itens.push(...await ler());
-    if (pg % 50 === 0) console.log(`${rotulo}: página ${pg}/${total}`);
-  }
-  return itens;
 }
 
 (async () => {
@@ -52,14 +46,28 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
   if (iAreas > 0) {
     procs = JSON.parse(fs.readFileSync(process.argv[iAreas + 1], 'utf8')).map(([cod, num, cli, contr, area]) => ['', cod, num, cli, contr, area]);
   } else {
-  let p = await entrar(browser, 'Processos');
-  await p.selectOption('#TIWCOMBOBOX2', { index: 0 }); // "* Todas as Situações *"
-  await quieto(p);
-  await p.locator('#TIWGRADBUTTON3').evaluate(e => e.click());
-  await quieto(p);
-  procs = await paginar(p, '#TIWEDIT22', '#TIWEDIT23', () => p.$$eval('tr', trs => trs.filter(t => t.offsetParent !== null)
-    .map(t => [...t.cells].map(c => c.innerText.trim())).filter(c => c.length >= 10 && /^\d+$/.test(c[1]))), 'processos');
-  await p.context().close();
+  const porCodigo = new Map();
+  let esperadoProcs = 0;
+  const abrirProcessos = async () => {
+    const p = await entrar(browser, 'Processos');
+    await p.selectOption('#TIWCOMBOBOX2', { index: 0 }); // "* Todas as Situações *"
+    await quieto(p);
+    await p.locator('#TIWGRADBUTTON3').evaluate(e => e.click());
+    await quieto(p);
+    esperadoProcs = Number(((await p.innerText('body')).match(/Total de:\s*([\d.]+)\s*Processo/) || [])[1]?.replace(/\./g, '')) || 0;
+    return { p, pagina: '#TIWEDIT22', total: '#TIWEDIT23' };
+  };
+  await percorrerPaginas({
+    rotulo: 'processos', quieto, abrir: abrirProcessos,
+    porPagina: async (p, pg) => {
+      const linhas = await p.$$eval('tr', trs => trs.filter(t => t.offsetParent !== null)
+        .map(t => [...t.cells].map(c => c.innerText.trim())).filter(c => c.length >= 10 && /^\d+$/.test(c[1])));
+      for (const c of linhas) porCodigo.set(c[1], c);
+      if (pg % 50 === 0) console.log(`processos: página ${pg}`);
+    },
+  });
+  procs = [...porCodigo.values()];
+  if (esperadoProcs && procs.length < esperadoProcs) throw new Error(`Li ${procs.length} processos, mas o NAJ informa ${esperadoProcs}.`);
   }
   // a área do processo é o campo "Advogado do Cliente" do cadastro (coluna 5 da pesquisa)
   const areaPorNumero = new Map(), areaPorPartes = new Map(), areas = new Map();
@@ -83,6 +91,40 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
   const arqCache = iCache > 0 ? process.argv[iCache + 1] : path.join(saida, 'detalhes.json');
   const cache = fs.existsSync(arqCache) ? JSON.parse(fs.readFileSync(arqCache, 'utf8')) : {};
   const salvarCache = () => fs.writeFileSync(arqCache, JSON.stringify(cache));
+  // semente: atividades já gravadas no formulário, pela data/hora, usuário e começo da descrição (iguais aos da lista do NAJ)
+  const chaveSemente = (dataHora, usuario, desc) => [dataHora.slice(0, 16), usuario, desc.replace(/\s+/g, ' ').slice(0, 80)].join('|');
+  const semente = new Map();
+  const iSem = process.argv.indexOf('--semente');
+  const iDias = process.argv.indexOf('--reler-dias');
+  const relerDias = iDias > 0 ? Number(process.argv[iDias + 1]) : 7;
+  const limiteSemente = new Date(Date.now() - relerDias * 86400000).toISOString().slice(0, 10);
+  if (iSem > 0) {
+    const dir = process.argv[iSem + 1];
+    const repetidas = new Set();
+    for (const f of fs.readdirSync(dir).filter(f => /^m-\d{4}-\d{2}-\d+\.json$/.test(f))) {
+      const d = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
+      for (const a of (d.data || d).itens || []) {
+        // a = [dataISO, HH:MM, minutos, usuário, cliente, número, área do processo, descrição, contrária, área jurídica, cód. processo, cód. atividade]
+        if (!a[11] || a[0] >= limiteSemente) continue;
+        const [aa, mm, dd] = a[0].split('-');
+        const k = chaveSemente(`${dd}/${mm}/${aa} ${a[1]}`, a[3], a[7]);
+        if (semente.has(k)) repetidas.add(k);
+        semente.set(k, { codAtiv: a[11], codProc: a[10] || '', areaAtiv: a[9] || '', tempo: `${String(Math.floor(a[2] / 60)).padStart(2, '0')}:${String(a[2] % 60).padStart(2, '0')}`, minutos: a[2] });
+      }
+    }
+    repetidas.forEach(k => semente.delete(k)); // duas atividades iguais na lista: abre as duas
+    console.log(`semente: ${semente.size} atividades já gravadas (até ${limiteSemente}, as mais novas são relidas)`);
+  }
+  const minutosDe = t => /^\d+:\d+/.test(t || '') ? t.split(':').slice(0, 2).reduce((h, m) => Number(h) * 60 + Number(m)) : null;
+  // detalhe já conhecido: do cache desta execução ou da semente (só se o tempo na lista do NAJ for o mesmo gravado)
+  const conhecido = (k, linha) => {
+    if (cache[k]) return cache[k];
+    const s = semente.get(chaveSemente(linha[0], linha[4], linha[2]));
+    if (!s) return null;
+    const t = minutosDe(linha[1]);
+    return t === null || t === s.minutos ? s : null;
+  };
+  let daSemente = 0;
   const iTrab = process.argv.indexOf('--paralelo');
   // com 2 sessões do mesmo usuário o NAJ chegou a mostrar a uma a página da outra; o padrão é 1
   const nTrab = iTrab > 0 ? Math.max(1, Number(process.argv[iTrab + 1]) || 1) : 1;
@@ -156,12 +198,18 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
   const jaVistas = new Set(); // linhas já lidas nesta execução: uma página inteira repetida = lista desatualizada
   let lidas = 0, naoConferidas = 0;
   async function trabalhador(t) {
-    const q = await abrirLista();
-    q.setDefaultTimeout(20000);
     const pgIni = Number(process.env.PAGINA_INICIAL) || 1, pgFim = Math.min(totalPaginas, Number(process.env.PAGINA_FINAL) || totalPaginas);
-    for (let pg = pgIni + t; pg <= pgFim; pg += nTrab) {
-      if (pg > 1) { await q.fill(pag.pagina, String(pg)); await q.press(pag.pagina, 'Enter'); await quieto(q); }
-      if (await q.inputValue(pag.pagina) !== String(pg)) throw new Error(`Não consegui abrir a página ${pg} da lista de atividades.`);
+    const abrir = async () => {
+      const q = await abrirLista();
+      q.setDefaultTimeout(20000);
+      const pg2 = await paginacao(q);
+      const total2 = Number(await q.inputValue(pg2.total)) || 1;
+      if (total2 < totalPaginas) throw new Error(`A lista de atividades tem ${total2} páginas, menos que as ${totalPaginas} do começo.`);
+      return { p: q, pagina: pg2.pagina, total: pg2.total };
+    };
+    // a página só entra no resultado depois de lida inteira: se a sessão cair no meio, ela é lida de novo
+    await percorrerPaginas({ rotulo: `[sessão ${t + 1}]`, quieto, abrir, de: pgIni + t, ate: pgFim, passo: nTrab, limitePagina: 150000,
+      porPagina: async (q, pg) => {
       let linhas = await lerLinhas(q);
       for (let tent = 0; linhas.length && linhas.every(l => jaVistas.has(chaveDe(l))) && tent < 3; tent++) {
         console.log(`[sessão ${t + 1}] página ${pg} veio igual a uma já lida; abrindo de novo`);
@@ -169,11 +217,13 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
         linhas = await lerLinhas(q);
       }
       if (linhas.length && linhas.every(l => jaVistas.has(chaveDe(l)))) throw new Error(`A página ${pg} da lista de atividades repete outra já lida.`);
-      linhas.forEach(l => jaVistas.add(chaveDe(l)));
+      const daPagina = [];
+      let semDetalhe = 0;
       console.log(`[sessão ${t + 1}] página ${pg}/${totalPaginas} (${new Date().toISOString().slice(11, 19)})`);
-      if (process.env.DEPURAR) console.log('  1ª linha:', JSON.stringify(linhas[0]), 'linhas:', linhas.length, 'sem cache:', linhas.filter(l => !cache[chaveDe(l)]).length);
+      if (process.env.DEPURAR) console.log('  1ª linha:', JSON.stringify(linhas[0]), 'linhas:', linhas.length, 'sem cache:', linhas.filter(l => !conhecido(chaveDe(l), l)).length);
       for (let i = 0; i < linhas.length; i++) {
         const k = chaveDe(linhas[i]);
+        if (!cache[k] && conhecido(k, linhas[i])) { cache[k] = conhecido(k, linhas[i]); daSemente++; }
         if (!cache[k]) {
           // se a atividade aberta não for a da linha (a lista mudou), relê a página e tenta de novo
           let det = null;
@@ -182,16 +232,19 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
             if (!det) { await q.fill(pag.pagina, String(pg)); await q.press(pag.pagina, 'Enter'); await quieto(q); const novas = await lerLinhas(q); if (!novas[i] || chaveDe(novas[i]) !== k) break; }
           }
           if (det) { cache[k] = det; lidas++; if (lidas % 50 === 0) { salvarCache(); console.log(`detalhes lidos: ${lidas}`); } }
-          else { naoConferidas++; brutas.push([...linhas[i], { codAtiv: '', codProc: '', areaAtiv: '', tempo: '' }]); continue; }
+          else { semDetalhe++; daPagina.push([...linhas[i], { codAtiv: '', codProc: '', areaAtiv: '', tempo: '' }]); continue; }
         }
-        brutas.push([...linhas[i], cache[k]]);
+        daPagina.push([...linhas[i], cache[k]]);
       }
-    }
-    await q.context().close();
+      linhas.forEach(l => jaVistas.add(chaveDe(l)));
+      brutas.push(...daPagina);
+      naoConferidas += semDetalhe;
+    } });
   }
   await Promise.all(Array.from({ length: nTrab }, (_, t) => trabalhador(t)));
   salvarCache();
   await browser.close();
+  console.log(`detalhes abertos no NAJ: ${lidas}; reaproveitados do formulário: ${daSemente}`);
   if (naoConferidas) console.log(`atividades sem detalhe (a lista mudou durante a leitura): ${naoConferidas}`);
 
   const areaPorCodigo = new Map(procs.map(c => [c[1], (c[5] || '').trim()]));
@@ -212,7 +265,8 @@ async function paginar(p, campoPagina, campoTotal, ler, rotulo) {
     const areaProc = det.codProc ? (areaPorCodigo.get(det.codProc) || '') : '';
     atividades.push([`${aa}-${mm}-${dd}`, (h || '').slice(0, 5), th * 60 + tm, usuario, cliente, numero, areaProc, desc.replace(/\s+/g, ' ').slice(0, 140), contraria, det.areaAtiv, det.codProc, det.codAtiv]);
   }
-  if (esperado && atividades.length < esperado * 0.97) throw new Error(`Li ${atividades.length} atividades, mas o NAJ informa ${esperado}.`);
+  // nenhuma atividade pode faltar (o total é o do começo da leitura; as lançadas durante a leitura só somam)
+  if (!esperado || atividades.length < esperado) throw new Error(`Li ${atividades.length} atividades, mas o NAJ informa ${esperado}. Nada deve ser gravado.`);
   fs.writeFileSync(path.join(saida, 'atividades.json'), JSON.stringify(atividades));
   fs.writeFileSync(path.join(saida, 'usuarios.json'), JSON.stringify(usuarios));
   fs.writeFileSync(path.join(saida, 'areas.json'), JSON.stringify([...areas.entries()].sort((a, b) => b[1] - a[1])));

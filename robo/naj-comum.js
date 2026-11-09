@@ -76,4 +76,41 @@ async function janelaPesquisa(p, marca) {
   return j;
 }
 
-module.exports = { ErroLogin, entrarNoNaj, janelaPesquisa, espera };
+// Percorre as páginas de uma lista do NAJ. Se a tela travar, a sessão cair ou uma página demorar demais
+// (o NAJ às vezes fica lento numa sessão longa), entra de novo no NAJ e continua da mesma página.
+// abrir(): abre a lista numa sessão nova e devolve { p, pagina, total } (seletores dos campos "Página(s) n de total").
+// porPagina(p, pg) lê a página aberta e devolve true para parar antes do fim. Só depois que ela termina a página conta como lida.
+async function percorrerPaginas({ abrir, porPagina, quieto, rotulo, de = 1, ate = Infinity, passo = 1, tentativas = 4, limitePagina = 180000 }) {
+  let lista = await abrir();
+  const total = Number(await lista.p.inputValue(lista.total)) || 1;
+  let falhas = 0;
+  const reabrir = async motivo => {
+    if (++falhas > tentativas) throw new Error(`${rotulo}: ${motivo}; desisti depois de ${tentativas} novas entradas no NAJ.`);
+    console.log(`${rotulo}: ${motivo}; entrando de novo no NAJ (${falhas}/${tentativas})`);
+    await lista.p.context().close().catch(() => {});
+    lista = await abrir();
+  };
+  for (let pg = de; pg <= Math.min(total, ate); ) {
+    const ini = Date.now();
+    let parar;
+    try {
+      if (await lista.p.inputValue(lista.pagina) !== String(pg)) {
+        await lista.p.fill(lista.pagina, String(pg));
+        await lista.p.press(lista.pagina, 'Enter');
+        await quieto(lista.p);
+      }
+      if (await lista.p.inputValue(lista.pagina) !== String(pg)) throw new Error(`a página ${pg} não abriu`);
+      parar = await porPagina(lista.p, pg);
+    } catch (err) {
+      await reabrir(`falha na página ${pg} (${String(err.message).split('\n')[0]})`);
+      continue;
+    }
+    if (parar) break;
+    pg += passo;
+    if (Date.now() - ini > limitePagina && pg <= Math.min(total, ate)) await reabrir(`a página ${pg - passo} levou ${Math.round((Date.now() - ini) / 1000)} s`);
+  }
+  await lista.p.context().close().catch(() => {});
+  return total;
+}
+
+module.exports = { ErroLogin, entrarNoNaj, janelaPesquisa, espera, percorrerPaginas };
