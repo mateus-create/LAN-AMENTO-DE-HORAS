@@ -1,38 +1,51 @@
-# Atualização dos cadastros do NAJ no formulário (de hora em hora)
+# Atualização dos cadastros do NAJ no formulário
 
 O formulário sugere clientes e mostra processos a partir de uma cópia da lista do NAJ,
 guardada na coleção `cadastros` do formulário https://claude.ai/artifact/DW1sanezeJtNKf3D3N2uyf.
 O formulário não acessa o NAJ diretamente, então esta cópia precisa ser renovada.
 
-1. `node robo/naj-cadastros.js <pasta> --clientes-antes <N>` (N = campo `clientes` de `cadastros/info` atual): baixa clientes (ativos e inativos) e só os processos com situação ativa no NAJ (filtro "Somente Ativos" do módulo Processos). Leva cerca de 15 a 25 minutos.
-   Rode em segundo plano. Nada é gravado no NAJ.
-   O próprio robô para com erro (sem gerar `clientes.json`) se ler menos de 98% do total que o NAJ informa
-   ou menos de 98% de N. Os campos das janelas de pesquisa são achados pelo conteúdo (`robo/naj-comum.js`),
-   porque o NAJ renumera os ids `TIWEDITn` quando acrescenta janelas à tela.
-2. `node robo/cadastros-para-formulario.js <pasta> <pasta>/docs`: divide as listas em documentos de até ~200 KB
-   (`clientes-N`, `processos-N`) e gera `info`.
-3. ArtifactData `list` em `cadastros` para ver os documentos atuais e suas versões.
-4. Para cada arquivo em `<pasta>/docs`, ArtifactData `set` em `cadastros` com `doc_id` = nome do arquivo sem `.json`,
-   `file_path` = o arquivo e `if_version` = versão atual quando o documento já existe.
-   Grave `info` por último. Apague (`delete`) os documentos `clientes-N`/`processos-N` que sobraram de uma lista maior.
-5. Se o download falhar no meio, não grave nada: o formulário continua com a cópia anterior.
-6. Conferência antes de gravar (passo 4): o log precisa mostrar `processos ativos: N (o NAJ informa N)` com os dois números
-   iguais, e o total de clientes não pode ter caído mais de 0,5% em relação a `cadastros/info` atual (campo `clientes`).
-   Se falhar, não grave nada e diga o motivo em uma linha (a próxima execução tenta de novo).
-   Use sempre uma pasta nova e vazia (ex.: `/tmp/cad-<data-hora>`), para não misturar arquivos de outra execução.
+Há dois modos (`robo/naj-cadastros.js`), ambos só leitura no NAJ:
+- **Rápido** (`--anterior`, cerca de 2 minutos): a pesquisa de processos vem do código mais novo para o mais antigo, então o robô
+  lê só as primeiras páginas, até achar um código que já está na cópia. A cópia só é aceita se **cópia + novos = total de ativos
+  do NAJ**. Se não bater (algum processo foi baixado ou reativado), ele lê todos os processos. Os clientes vêm em ordem alfabética
+  e não dá para pegar só os novos; o robô confere os totais Ativo/Inativo do NAJ e se o cliente de cada processo novo já está
+  na lista. Se algo mudou, lê todos os clientes.
+- **Completo** (`--completo`, cerca de 16 minutos): lê tudo. Pega o que o rápido não vê porque não muda os totais
+  (nome de cliente corrigido, número de processo alterado, um processo baixado e outro reativado no mesmo intervalo).
+  Rode uma vez por dia (execução das 12:45).
+
+Nos dois modos, se a tela travar ou a sessão do NAJ cair, o robô entra de novo e continua da mesma página (até 4 vezes),
+e só termina com sucesso se o total lido for **exatamente** o total que o NAJ informa (clientes por situação e processos ativos).
+
+1. Use uma pasta nova e vazia `<pasta>` (ex.: `/tmp/cad-<data-hora>`).
+2. ArtifactData `list` em `cadastros` com `out_dir` = `<pasta>/form` (anote as versões de cada documento).
+   `node robo/cadastros-anteriores.js <pasta>/form/cadastros <pasta>/anterior` remonta a cópia atual (e confere com o `info`).
+3. Em segundo plano: `timeout 2700 node robo/naj-cadastros.js <pasta>/novo --anterior <pasta>/anterior > <pasta>/cad.log 2>&1`
+   (acrescente `--completo` na execução das 12:45). Se o passo 2 falhar, rode sem `--anterior` (vira completo).
+4. Se o robô terminar com erro (código de saída diferente de 0), não grave nada e diga o motivo em uma linha (última linha do log).
+5. Se a última linha disser `SEM MUDANÇAS`, não grave nada (`resumo.json` com `mudou: false`).
+6. Se houver mudanças: `node robo/cadastros-para-formulario.js <pasta>/novo <pasta>/novo/docs` divide as listas em documentos
+   (`clientes-N`, `processos-N`) e gera `info`. Grave com um único ArtifactData `batch`: `set` de cada arquivo em `<pasta>/novo/docs`
+   com `doc_id` = nome do arquivo sem `.json` e `if_version` = versão do passo 2 quando o documento já existe;
+   `delete` dos documentos `clientes-N`/`processos-N` que sobraram de uma lista maior; `info` por último.
 
 ## Relatório de horas da equipe (rotina separada, uma vez por dia)
 
-1. `node robo/naj-relatorio.js <pasta>/rel <primeiro dia do mês passado, DD/MM/AAAA> --cache /tmp/naj-detalhes.json`:
-   baixa a área de cada processo (campo "Advogado do Cliente") e as atividades de todos os usuários no período. Abre cada
-   atividade (só leitura) para ler o processo vinculado e a Área Jurídica; as já lidas ficam no cache. Rode em segundo plano.
+1. ArtifactData `list` em `relatorio` com `out_dir` = `<pasta>/relform` (guarda o `info`, os meses atuais e as versões).
+   Em segundo plano: `timeout 4200 node robo/naj-relatorio.js <pasta>/rel <primeiro dia do mês passado, DD/MM/AAAA> --cache <pasta>/detalhes.json --semente <pasta>/relform/relatorio > <pasta>/rel.log 2>&1`.
+   Baixa a área de cada processo (campo "Advogado do Cliente") e as atividades de todos os usuários no período. A lista do NAJ
+   não mostra o processo vinculado nem a Área Jurídica, então o robô abre (só leitura) cada atividade que ainda não está no
+   formulário, as dos últimos 7 dias (podem ter sido corrigidas) e as que estão com tempo diferente do gravado; as outras vêm
+   da `--semente`. Leva cerca de 20 a 30 minutos. Se a sessão do NAJ cair ou ficar lenta, o robô entra de novo e continua.
+   Só termina com sucesso se leu pelo menos o total de atividades que o NAJ informa no período.
    Núcleo de cada hora (calculado na página): área do processo vinculado → Área Jurídica da atividade → núcleo principal da pessoa.
-2. ArtifactData `get` em `relatorio` / `info` com `out_dir` (se existir) e
-   `node robo/relatorio-para-formulario.js <pasta>/rel <info.json baixado ou -> <pasta>/rel/docs`.
+2. `node robo/relatorio-para-formulario.js <pasta>/rel <pasta>/relform/relatorio/info.json <pasta>/rel/docs` (use `-` se não houver `info`).
 3. Grave cada `m-AAAA-MM-N.json` em `relatorio` (`set`, `if_version` quando já existir), apague os ids de `apagar.json`
    e grave `info` por último. A coleção `relatorio` só é lida por administradores.
-4. Cuidados: se o passo 1 falhar (sessão do NAJ cai, timeout), tente mais uma vez; se falhar de novo, não grave nada.
-   Antes de gravar, baixe os meses atuais (`get` com `out_dir`) e compare a quantidade de itens: um mês já fechado
+4. Cuidados: se o passo 1 falhar, tente mais uma vez com o mesmo comando, acrescentando `--reusar-areas <pasta>/rel/processos-areas.json`
+   se esse arquivo já existir (não baixa a lista de processos de novo) e mantendo o `--cache` (as atividades já abertas não são
+   reabertas); se falhar de novo, não grave nada.
+   Antes de gravar, compare a quantidade de itens com os meses baixados no passo 1: um mês já fechado
    não pode ter ficado com menos itens; se ficou, não grave e avise. Áreas novas: liste as áreas de `info.areas`
    e `info.areasAtividade` que não estavam no `info` anterior e não estão em `config/nucleos` (`mapa` / `mapaAtividade`).
    O relatório roda logo depois da atualização de cadastros das 06:45 (mesma sessão), para não usar o NAJ em paralelo.
