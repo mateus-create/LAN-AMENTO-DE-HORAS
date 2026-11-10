@@ -13,16 +13,18 @@ const fs = require('fs');
 const path = require('path');
 let chromium;
 try { ({ chromium } = require('playwright')); } catch { ({ chromium } = require('/opt/node22/lib/node_modules/playwright')); }
-const { entrarNoNaj, espera, percorrerPaginas } = require('./naj-comum');
+const { entrarNoNaj, espera, percorrerPaginas, comNovasTentativas } = require('./naj-comum');
 const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
 const dig = s => (s || '').replace(/\D/g, '');
 
 async function entrar(browser, modulo) {
   const p = await entrarNoNaj(browser, { login: process.env.NAJ_USUARIO, senha: process.env.NAJ_SENHA });
-  await p.locator('text="Controles"').first().click();
-  await espera(800);
-  await p.locator(`text="${modulo}"`).first().click();
-  await espera(6000);
+  try {
+    await p.locator('text="Controles"').first().click();
+    await espera(800);
+    await p.locator(`text="${modulo}"`).first().click();
+    await espera(6000);
+  } catch (err) { await p.context().close().catch(() => {}); throw err; }
   return p;
 }
 async function quieto(p) {
@@ -185,7 +187,7 @@ async function quieto(p) {
     return { codAtiv: v.EDCODIGOATIVIDADE || '', codProc: v.EDCODIGOPROCESSO || '', areaAtiv: area, tempo: v.EDTEMPOTOTAL || '' };
   }
 
-  let p0 = await abrirLista();
+  let p0 = await comNovasTentativas(abrirLista, 'lista de atividades');
   const usuarios = await p0.$$eval('#TIWCOMBOBOX1 option', os => os.map(o => o.text.trim()).filter(t => t && !t.startsWith('*') && !t.startsWith('-')));
   const conferePeriodo = [await p0.inputValue('#TIWEDIT1'), await p0.inputValue('#TIWEDIT2')];
   const esperado = Number(((await p0.innerText('body')).match(/Total de:\s*([\d.]+)\s*Registro/) || [])[1]?.replace(/\./g, '')) || 0;

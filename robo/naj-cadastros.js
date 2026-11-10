@@ -12,7 +12,7 @@ const fs = require('fs');
 const path = require('path');
 let chromium;
 try { ({ chromium } = require('playwright')); } catch { ({ chromium } = require('/opt/node22/lib/node_modules/playwright')); }
-const { entrarNoNaj, janelaPesquisa, espera, percorrerPaginas } = require('./naj-comum');
+const { entrarNoNaj, janelaPesquisa, espera, percorrerPaginas, comNovasTentativas } = require('./naj-comum');
 
 const arg = nome => { const i = process.argv.indexOf(nome); return i > 0 ? process.argv[i + 1] : null; };
 const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
@@ -20,6 +20,9 @@ const numero = t => Number(String(t || '').replace(/\./g, '')) || 0;
 
 async function entrar(browser, modulo = 'atividade') {
   const p = await entrarNoNaj(browser, { login: process.env.NAJ_USUARIO, senha: process.env.NAJ_SENHA });
+  try { return await abrirModulo(p, modulo); } catch (err) { await p.context().close().catch(() => {}); throw err; }
+}
+async function abrirModulo(p, modulo) {
   await p.locator('text="Controles"').first().click();
   await espera(800);
   if (modulo === 'processos') {
@@ -75,7 +78,7 @@ async function todosProcessos(browser) {
     },
   });
   // confere com o total de uma sessão nova (o total da sessão que leu pode ser de antes de um processo novo)
-  const l = await abrirProcessos(browser);
+  const l = await comNovasTentativas(() => abrirProcessos(browser), 'processos ativos');
   const fim = await totalProcessos(l.p);
   await l.p.context().close();
   console.log(`processos ativos: ${codigos.size} (o NAJ informa ${fim})`);
@@ -128,7 +131,7 @@ async function abrirClientes(browser, situacao) {
 }
 async function totaisClientes(browser) {
   const r = {};
-  for (const s of ['Ativo', 'Inativo']) { const l = await abrirClientes(browser, s); r[s] = l.totalNaj; await l.p.context().close(); }
+  for (const s of ['Ativo', 'Inativo']) { const l = await comNovasTentativas(() => abrirClientes(browser, s), `clientes ${s}`); r[s] = l.totalNaj; await l.p.context().close(); }
   return r;
 }
 async function todosClientes(browser) {
@@ -143,7 +146,7 @@ async function todosClientes(browser) {
         if (pg % 50 === 0) console.log(`clientes ${situacao}: página ${pg}, ${vistos.size} registros`);
       },
     });
-    const l = await abrirClientes(browser, situacao);
+    const l = await comNovasTentativas(() => abrirClientes(browser, situacao), `clientes ${situacao}`);
     await l.p.context().close();
     console.log(`clientes ${situacao}: ${vistos.size} (o NAJ informa ${l.totalNaj})`);
     if (!l.totalNaj || vistos.size !== l.totalNaj) throw new Error(`Li ${vistos.size} clientes "${situacao}", mas o NAJ informa ${l.totalNaj}. Nada foi alterado.`);

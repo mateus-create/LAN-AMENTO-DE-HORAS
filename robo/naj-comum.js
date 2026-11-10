@@ -86,7 +86,19 @@ async function janelaPesquisa(p, marca) {
 // porPagina(p, pg) lê a página aberta e devolve true para parar antes do fim. Só depois que ela termina a página conta como lida.
 // assinatura(p) (opcional) identifica o conteúdo da página (ex.: código da primeira linha): depois de trocar de página, espera
 // até ela mudar, para nunca ler de novo a página anterior. Uma página que passe de 2,5 × limitePagina é dada como travada.
-async function percorrerPaginas({ abrir, porPagina, quieto, rotulo, assinatura, de = 1, ate = Infinity, passo = 1, tentativas = 4, limitePagina = 120000 }) {
+// Repete uma entrada no NAJ que falhou (tela de login lenta, menu que não aparece a tempo), com uma pausa entre as tentativas.
+async function comNovasTentativas(fn, rotulo, vezes = 3) {
+  for (let i = 1; ; i++) {
+    try { return await fn(); } catch (err) {
+      if (i >= vezes) throw err;
+      console.log(`${rotulo}: não consegui entrar no NAJ (${String(err.message).split('\n')[0]}); tentando de novo (${i}/${vezes - 1})`);
+      await espera(15000 * i);
+    }
+  }
+}
+
+async function percorrerPaginas({ abrir: abrirUmaVez, porPagina, quieto, rotulo, assinatura, de = 1, ate = Infinity, passo = 1, tentativas = 4, limitePagina = 120000 }) {
+  const abrir = () => comNovasTentativas(abrirUmaVez, rotulo);
   let lista = await abrir();
   const total = Number(await lista.p.inputValue(lista.total)) || 1;
   let falhas = 0;
@@ -131,4 +143,4 @@ async function percorrerPaginas({ abrir, porPagina, quieto, rotulo, assinatura, 
   return total;
 }
 
-module.exports = { ErroLogin, entrarNoNaj, janelaPesquisa, espera, percorrerPaginas };
+module.exports = { ErroLogin, entrarNoNaj, janelaPesquisa, espera, percorrerPaginas, comNovasTentativas };
