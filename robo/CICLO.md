@@ -44,5 +44,6 @@ Use uma pasta de trabalho nova, por exemplo `$TMP/ciclo-<data-hora>` (chamada ab
 
 ## Testar sem gravar
 
-`node robo/naj-lancar.js entrada.json saida.json --teste --prints prints/` preenche a tela "Nova Atividade" do NAJ,
+`node robo/naj-lancar.js entrada.json saida.json --teste --prints prints/` abre Controles → Atividades → botão de três pontos → "Nova Atividade",
+preenche a janela do NAJ,
 confere os campos, tira um print e fecha a janela sem clicar em Gravar.

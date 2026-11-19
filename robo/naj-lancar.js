@@ -1,6 +1,7 @@
 // Robô de lançamento de atividades no NAJ.
 // Uso: node robo/naj-lancar.js <entrada.json> <saida.json> [--teste] [--prints <pasta>]
-// entrada.json: [{ id, cliente, clienteCod?, processo?, processoCod?, area, tipo, descricao, data (AAAA-MM-DD), inicio (HH:MM), termino (HH:MM), disponivelCliente }]
+// entrada.json: [{ id, cliente, clienteCod?, processo?, processoCod?, area, tipo, descricao, data (AAAA-MM-DD), inicio (HH:MM), termino (HH:MM) }]
+// (disponivelCliente ainda pode vir, mas a tela nova do NAJ não tem mais essa opção e ele é ignorado)
 // saida.json:   [{ id, status: "lancado"|"erro"|"teste_ok", mensagem, clienteNaj?, processoNaj?, candidatos?, print? }]
 // Com --teste preenche a tela inteira mas NÃO clica em Gravar. Erros guardam um print em <prints>/<id>-erro.png.
 // Teste de credencial: node robo/naj-lancar.js --testar-login <login> <VARIAVEL_DA_SENHA>
@@ -10,10 +11,9 @@ const path = require('path');
 let chromium;
 try { ({ chromium } = require('playwright')); } catch { ({ chromium } = require('/opt/node22/lib/node_modules/playwright')); }
 
-const TIPOS = { 'CONTRATOS FIXOS': '100', 'PROPOSTA FECHADA': '200', 'HORAS ADMINISTRATIVAS (MKS)': '300' };
 const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
 const soDigitos = s => (s || '').replace(/\D/g, '');
-const { ErroLogin, entrarNoNaj, janelaPesquisa, espera } = require('./naj-comum');
+const { ErroLogin, entrarNoNaj, espera } = require('./naj-comum');
 
 class ErroLancamento extends Error {
   constructor(mensagem, candidatos) { super(mensagem); this.candidatos = candidatos; }
@@ -29,139 +29,116 @@ async function entrar(browser, cred, printErro) {
   return p;
 }
 
-// Linhas visíveis da janela de pesquisa aberta (cada linha = textos das células).
-async function linhasResultado(p, colunas) {
-  return p.$$eval('[id^=RGJANELA] tr', (trs, n) => trs
-    .filter(t => t.offsetParent !== null && t.querySelector('a[title^="Clique aqui"]'))
-    .map(t => [...t.cells].map(c => c.innerText.trim()))
-    .filter(c => c.length === n && c[0]), colunas);
+// Tela "Nova Atividade" (nova versão do NAJ, desde 11/2026): janela (modal) aberta pelo botão de três pontos da lista
+// de atividades, com campos de id fixo. As pesquisas de cliente e processo usam a mesma consulta que a tela usa.
+const MODAL = '#modal-manutencao-atividade';
+
+async function abrirNovaAtividade(p) {
+  await p.locator('button:has(i.fa-ellipsis-v)').filter({ visible: true }).first().click();
+  await espera(500);
+  await p.locator('span', { hasText: /^Nova Atividade$/ }).filter({ visible: true }).first().click();
+  await p.waitForSelector(`${MODAL}.show #historico`, { state: 'visible', timeout: 30000 });
+  // espera a tela carregar as listas (tipos de atividade e áreas jurídicas)
+  await p.waitForFunction(() => document.querySelectorAll('#id_tipo_atividade option').length > 1
+    && document.querySelectorAll('#id_area_juridica option').length > 1, null, { timeout: 30000 });
+  await quieto(p);
 }
 
-async function clicarLinha(p, texto) {
-  await p.locator('[id^=RGJANELA] tr', { hasText: texto }).filter({ visible: true }).first()
-    .locator('a[title^="Clique aqui"]').first().click({ force: true });
-  await espera(4000);
+// Consulta do NAJ (pessoas/getPessoasFilter, processos/getProcessosFilter...) com a sessão aberta.
+async function consultar(p, rota, termo) {
+  const t = encodeURIComponent(String(termo).replace(/[\/\\?#%]+/g, ' ').replace(/\s+/g, ' ').trim());
+  const r = await p.evaluate(url => najPessoaAtividade.getData(baseURL + url), `${rota}/${t}`);
+  return (r && r.data) || [];
 }
 
-// Campo cujo id é o prefixo seguido só de dígitos (EDCLIENTE123, e não EDCLIENTECOD123).
-function campo(p, prefixo) {
-  return p.locator(`[id^=${prefixo}]`).filter({ visible: true })
-    .filter({ has: p.locator('xpath=self::*') }).and(p.locator(`xpath=//*[translate(substring(@id, ${prefixo.length + 1}), '0123456789', '') = '' and starts-with(@id, '${prefixo}')]`)).first();
+async function valor(p, id) {
+  return p.inputValue(`${MODAL} #${id}`);
 }
 
-async function valor(p, prefixo) {
-  return campo(p, prefixo).inputValue();
+// Digita um código e sai do campo: o NAJ preenche o nome (ou o processo e o cliente) ao mudar o campo.
+async function preencherCodigo(p, id, v, idPreenchido) {
+  const el = p.locator(`${MODAL} #${id}`);
+  await el.fill(v);
+  await el.press('Tab');
+  await quieto(p);
+  for (let i = 0; i < 50 && !(await valor(p, idPreenchido)); i++) await espera(200);
+  await quieto(p);
+}
+
+async function processoPorCodigo(p, e) {
+  await preencherCodigo(p, 'codigo_processo', String(e.processoCod).trim(), 'resumo_prc');
+  const resumo = await valor(p, 'resumo_prc');
+  if (!resumo) throw new ErroLancamento(`Código de processo ${e.processoCod} não encontrado no NAJ. Confira o código.`);
+  return conferirClienteDoProcesso(p, e, resumo, `de código ${e.processoCod}`);
+}
+
+async function conferirClienteDoProcesso(p, e, resumo, qual) {
+  const clienteNaj = await valor(p, 'nome_cliente');
+  const clienteCodNaj = await valor(p, 'codigo_cliente');
+  const outroCliente = e.clienteCod
+    ? String(e.clienteCod).trim() !== clienteCodNaj
+    : e.cliente && !norm(clienteNaj).includes(norm(e.cliente)) && !norm(e.cliente).includes(norm(clienteNaj));
+  if (outroCliente) {
+    throw new ErroLancamento(`O processo ${qual} é do cliente "${clienteNaj}", e não de "${e.cliente}". Confira o cliente ou o processo.`, [clienteNaj]);
+  }
+  return { clienteNaj, processoNaj: resumo };
 }
 
 async function selecionarProcesso(p, e) {
-  await p.locator('img[id^=IMMENUINFOPROCESSO]').first().click();
-  await espera(2500);
-  await p.locator('img[id^=IMCODIGOPROCESSO]').click();
-  await espera(3000);
-  const jan = await janelaPesquisa(p, 'Consulta de Processos');
-  if (!jan.rotulos['Número do Processo']) throw new Error('Não achei o campo "Número do Processo" na pesquisa de processos do NAJ.');
-  await p.fill(jan.rotulos['Número do Processo'], e.processo.trim());
-  await p.click(jan.botao);
-  await espera(4000);
-  // colunas: código | cliente | parte contrária | informações (número, comarca, classe)
-  const linhas = await linhasResultado(p, 4);
   const alvo = soDigitos(e.processo);
-  const achados = linhas.filter(c => soDigitos(c[3]).includes(alvo));
-  if (!achados.length) {
-    throw new ErroLancamento(`Processo "${e.processo}" não encontrado no NAJ. Confira o número.`);
-  }
-  let escolhido = achados[0];
-  if (achados.length > 1) {
-    const doCliente = achados.filter(c => norm(c[1]).includes(norm(e.cliente)));
+  const linhas = (await consultar(p, 'processos/getProcessosFilter', e.processo.trim()))
+    .filter(x => soDigitos(x.numero_processo_new || x.numero_processo).includes(alvo));
+  if (!linhas.length) throw new ErroLancamento(`Processo "${e.processo}" não encontrado no NAJ. Confira o número.`);
+  let escolhido = linhas[0];
+  if (linhas.length > 1) {
+    const doCliente = linhas.filter(x => e.clienteCod ? String(x.codigo_cliente) === String(e.clienteCod).trim() : norm(x.nome_cliente).includes(norm(e.cliente)));
     if (doCliente.length !== 1) {
-      throw new ErroLancamento(`Há ${achados.length} cadastros para o processo "${e.processo}". Indique o cliente exato.`,
-        achados.map(c => `${c[1]} x ${c[2]}`));
+      throw new ErroLancamento(`Há ${linhas.length} cadastros para o processo "${e.processo}". Indique o cliente exato.`,
+        linhas.map(x => `${x.nome_cliente} x ${x.nome_parte_contraria}`));
     }
     escolhido = doCliente[0];
   }
-  await clicarLinha(p, escolhido[3].split('\n')[0]);
-  const clienteNaj = await valor(p, 'EDCLIENTE');
-  if (e.cliente && !norm(clienteNaj).includes(norm(e.cliente)) && !norm(e.cliente).includes(norm(clienteNaj))) {
-    throw new ErroLancamento(`O processo "${e.processo}" é do cliente "${clienteNaj}", e não de "${e.cliente}". Confira o cliente ou o número do processo.`,
-      [clienteNaj]);
-  }
-  return { clienteNaj, processoNaj: `${escolhido[1]} x ${escolhido[2]} - ${escolhido[3].replace(/\n/g, ' / ')}` };
+  await preencherCodigo(p, 'codigo_processo', String(escolhido.codigo), 'resumo_prc');
+  const resumo = await valor(p, 'resumo_prc');
+  if (!resumo) throw new ErroLancamento(`O NAJ não aceitou o processo "${e.processo}" (código ${escolhido.codigo}).`);
+  return conferirClienteDoProcesso(p, e, resumo, `"${e.processo}"`);
 }
 
-// Processo pelo código de cadastro no NAJ: digitado direto no campo "Código do Processo".
-async function processoPorCodigo(p, e) {
-  await p.locator('img[id^=IMMENUINFOPROCESSO]').first().click();
-  await quieto(p);
-  await preencherCampo(p, 'EDCODIGOPROCESSO', String(e.processoCod).trim());
-  const numero = await valor(p, 'EDNUMEROPROCESSO');
-  const contraria = await valor(p, 'EDPARTECONTRARIA');
-  const classe = await valor(p, 'EDCLASSE');
-  if (!numero && !contraria && !classe) {
-    throw new ErroLancamento(`Código de processo ${e.processoCod} não encontrado no NAJ. Confira o código.`);
-  }
-  // com o cliente vazio o NAJ costuma trazer o cliente do processo; se não trouxer, preenchemos
-  if (!(await valor(p, 'EDCLIENTE'))) {
-    if (e.clienteCod) await preencherCampo(p, 'EDCLIENTECOD', String(e.clienteCod));
-    else await selecionarCliente(p, e);
-  }
-  const clienteNaj = await valor(p, 'EDCLIENTE');
-  const clienteCodNaj = await valor(p, 'EDCLIENTECOD');
-  const outroCliente = e.clienteCod
-    ? String(e.clienteCod) !== clienteCodNaj
-    : e.cliente && !norm(clienteNaj).includes(norm(e.cliente)) && !norm(e.cliente).includes(norm(clienteNaj));
-  if (outroCliente) {
-    throw new ErroLancamento(`O processo de código ${e.processoCod} é do cliente "${clienteNaj}", e não de "${e.cliente}". Confira o cliente ou o código do processo.`, [clienteNaj]);
-  }
-  return { clienteNaj, processoNaj: `${clienteNaj} x ${contraria}${numero ? ' - ' + numero : ''}${classe ? ' / ' + classe : ''}` };
-}
-
-// Cliente pelo código de cadastro no NAJ: digitado direto no campo de código do cliente.
 async function clientePorCodigo(p, e) {
-  await preencherCampo(p, 'EDCLIENTECOD', String(e.clienteCod).trim());
-  const clienteNaj = await valor(p, 'EDCLIENTE');
+  await preencherCodigo(p, 'codigo_cliente', String(e.clienteCod).trim(), 'nome_cliente');
+  const clienteNaj = await valor(p, 'nome_cliente');
   if (!clienteNaj) throw new ErroLancamento(`Cliente de código ${e.clienteCod} não encontrado no NAJ. Escolha o cliente de novo na lista.`);
   return { clienteNaj };
 }
 
-async function pesquisarCliente(p, termo) {
-  const jan = await janelaPesquisa(p, 'CPF/CNPJ');
-  await p.fill(jan.busca[0], termo);
-  await p.click(jan.botao);
-  await espera(4000);
-  return linhasResultado(p, 3); // código | nome | CPF/CNPJ
-}
-
 async function selecionarCliente(p, e) {
-  await p.locator('img[id^=IMCLIENTECNS]').click();
-  await espera(3000);
-  let linhas = await pesquisarCliente(p, e.cliente.trim());
+  const linhas = await consultar(p, 'pessoas/getPessoasFilter', e.cliente.trim());
   if (!linhas.length) {
     // procura sugestões palavra por palavra, da mais longa para a mais curta
     let sugestoes = [];
     for (const palavra of norm(e.cliente).split(' ').filter(w => w.length >= 4).sort((a, b) => b.length - a.length)) {
-      sugestoes = await pesquisarCliente(p, palavra);
+      sugestoes = await consultar(p, 'pessoas/getPessoasFilter', palavra);
       if (sugestoes.length) break;
     }
     throw new ErroLancamento(`Cliente "${e.cliente}" não encontrado no NAJ.` +
-      (sugestoes.length ? ' Veja se é um destes:' : ' Confira o nome.'), sugestoes.map(c => c[1]));
+      (sugestoes.length ? ' Veja se é um destes:' : ' Confira o nome.'), sugestoes.slice(0, 20).map(c => c.nome));
   }
-  let escolhido = linhas.length === 1 ? linhas[0] : linhas.find(c => norm(c[1]) === norm(e.cliente));
+  const exatos = linhas.filter(c => norm(c.nome) === norm(e.cliente));
+  const escolhido = linhas.length === 1 ? linhas[0] : exatos.length === 1 ? exatos[0] : null;
   if (!escolhido) {
     throw new ErroLancamento(`Encontrei ${linhas.length} clientes para "${e.cliente}". Escreva o nome completo de um deles:`,
-      linhas.map(c => c[1]));
+      linhas.slice(0, 20).map(c => c.nome));
   }
-  await clicarLinha(p, escolhido[2] || escolhido[1]);
-  return { clienteNaj: await valor(p, 'EDCLIENTE') };
+  return clientePorCodigo(p, { ...e, clienteCod: escolhido.pessoa_codigo });
 }
 
-function dataBR(iso) { const [a, m, d] = iso.split('-'); return `${d}/${m}/${a}`; }
-function hms(hhmm) { return hhmm.length === 5 ? hhmm + ':00' : hhmm; }
+const hhmm = t => String(t).trim().slice(0, 5);
 function duracao(ini, fim) {
-  const s = t => { const [h, m, x] = hms(t).split(':').map(Number); return h * 3600 + m * 60 + (x || 0); };
-  const d = s(fim) - s(ini);
+  const m = t => { const [h, mi] = hhmm(t).split(':').map(Number); return h * 60 + mi; };
+  const d = m(fim) - m(ini);
   if (d <= 0) throw new ErroLancamento('O horário de término precisa ser depois do horário de início.');
   const p2 = n => String(n).padStart(2, '0');
-  return `${p2(Math.floor(d / 3600))}:${p2(Math.floor(d % 3600 / 60))}:${p2(d % 60)}`;
+  return `${p2(Math.floor(d / 60))}:${p2(d % 60)}`;
 }
 
 // Espera o servidor responder; a resposta atrasada sobrescreve campos preenchidos antes dela.
@@ -171,23 +148,24 @@ async function quieto(p) {
   await espera(400);
 }
 
-async function preencherCampo(p, prefixo, v) {
-  const el = campo(p, prefixo);
-  await el.fill(v);
-  await el.press('Tab');
-  await quieto(p);
+// Mensagens que o NAJ mostra no canto da tela (toast) ou em caixa de alerta.
+async function avisosNaj(p) {
+  return p.$$eval('.toast, .toast-message, .swal2-popup, .jq-toast-single, .alert', els =>
+    els.filter(x => x.offsetParent !== null).map(x => x.innerText.replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, 5)).catch(() => []);
+}
+
+async function fecharJanela(p) {
+  await p.locator(`${MODAL} button[title="Fechar"]`).first().click({ force: true }).catch(() => {});
+  await espera(1500);
 }
 
 async function lancar(p, e, teste, pastaPrints) {
   for (const campo of ['cliente', 'area', 'tipo', 'descricao', 'data', 'inicio', 'termino']) {
     if (!e[campo] || !String(e[campo]).trim()) throw new ErroLancamento(`Campo obrigatório vazio: ${campo}.`);
   }
-  const codTipo = TIPOS[e.tipo];
-  if (!codTipo) throw new ErroLancamento(`Tipo de atividade desconhecido: "${e.tipo}".`);
   const tempo = duracao(e.inicio, e.termino);
 
-  await p.locator('text="Nova Atividade"').first().click();
-  await espera(4000);
+  await abrirNovaAtividade(p);
 
   // ordem de preferência: código do processo, número do processo, código do cliente, nome do cliente
   let r;
@@ -195,69 +173,87 @@ async function lancar(p, e, teste, pastaPrints) {
   else if (e.processo && e.processo.trim()) r = await selecionarProcesso(p, e);
   else if (e.clienteCod && String(e.clienteCod).trim()) r = await clientePorCodigo(p, e);
   else r = await selecionarCliente(p, e);
+  await quieto(p);
 
-  await p.locator('select[id^=CBAREAJURIDICA]').selectOption({ label: e.area });
-  await espera(2000);
-  await preencherCampo(p, 'EDTIPOATIVIDADECOD', codTipo);
-  if (norm(await valor(p, 'EDTIPOATIVIDADE')) !== norm(e.tipo)) throw new ErroLancamento('O NAJ não aceitou o tipo de atividade.');
-  await p.locator('textarea[id^=MMDESCRICAO]').fill(e.descricao.trim());
-  // a caixa vem antes dos horários: clicar nela recarrega a janela e pode desfazer o término
-  const ck = p.locator('input[id^=CKDISPONIVELCLIENTE]').filter({ visible: true }).first();
-  if ((await ck.isChecked()) !== (e.disponivelCliente !== false)) {
-    await p.locator('span[id^=CKDISPONIVELCLIENTE][id$=_CHKBCAPTION]').first().click();
-    await espera(2000);
+  // tipo de atividade: lista com código e nome (o campo de texto ao lado só filtra a lista)
+  const tipo = await p.evaluate(nome => {
+    const n = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
+    const op = [...document.querySelectorAll('#id_tipo_atividade option')].find(o => o.value && n(o.text) === n(nome));
+    if (!op) return null;
+    $('#id_tipo_atividade').val(op.value).trigger('change');
+    return { cod: op.value, texto: $('#id_tipo_atividade option:selected').text() };
+  }, e.tipo);
+  if (!tipo) throw new ErroLancamento(`Tipo de atividade desconhecido no NAJ: "${e.tipo}".`);
+  await quieto(p);
+
+  // área jurídica: com processo escolhido, o NAJ usa a área do processo e trava o campo
+  const area = p.locator(`${MODAL} #id_area_juridica`);
+  let avisoArea = '';
+  if (await area.isDisabled()) {
+    const doProcesso = await area.evaluate(x => x.options[x.selectedIndex]?.text || '');
+    if (norm(doProcesso) !== norm(e.area)) avisoArea = ` O NAJ usou a área jurídica do processo (${doProcesso}), e não ${e.area}.`;
+  } else {
+    const op = await area.evaluate((x, alvo) => {
+      const n = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
+      return [...x.options].find(o => o.value && n(o.text) === n(alvo))?.value;
+    }, e.area);
+    if (!op) throw new ErroLancamento(`O NAJ não tem a área jurídica "${e.area}".`);
+    await area.selectOption(op);
   }
-  // o NAJ calcula o tempo a partir do término; o tempo entra só na conferência
-  const esperado = { EDDATAINICIO: dataBR(e.data), EDHORAINICIO: hms(e.inicio), EDHORATERMINO: hms(e.termino) };
+
+  const setor = p.locator(`${MODAL} #id_setor_atividade`);
+  if (await setor.evaluate(x => x.required && !x.disabled && !x.value)) {
+    throw new ErroLancamento('O NAJ passou a exigir o "Setor" da atividade, que o robô ainda não preenche. Avise o administrador.');
+  }
+
+  await p.locator(`${MODAL} #historico`).fill(e.descricao.trim());
+
+  // data e horários: o NAJ recalcula o término quando o início muda (mantém a duração), então o início vem primeiro
+  const esperado = { data: e.data, hora_inicio: hhmm(e.inicio), hora_termino: hhmm(e.termino) };
   for (let tentativa = 0; ; tentativa++) {
-    for (const [prefixo, v] of Object.entries(esperado)) {
-      if ((await valor(p, prefixo)) !== v) await preencherCampo(p, prefixo, v);
+    for (const [id, v] of Object.entries(esperado)) {
+      if ((await valor(p, id)) !== v) {
+        const el = p.locator(`${MODAL} #${id}`);
+        await el.fill(v);
+        await el.dispatchEvent('change');
+        await quieto(p);
+      }
     }
-    await quieto(p);
-    esperado.EDTEMPOTOTAL = tempo;
     const errados = [];
-    for (const [prefixo, v] of Object.entries(esperado)) if ((await valor(p, prefixo)) !== v) errados.push(prefixo);
+    for (const [id, v] of Object.entries({ ...esperado, tempo })) if ((await valor(p, id)) !== v) errados.push(id);
     if (!errados.length) break;
     if (tentativa === 2) throw new ErroLancamento(`O NAJ não aceitou a data/horários (${errados.join(', ')}).`);
   }
-  if ((await ck.isChecked()) !== (e.disponivelCliente !== false)) throw new ErroLancamento('O NAJ não aceitou a opção "Disponível ao Cliente".');
 
   const conferido = {
-    cliente: await valor(p, 'EDCLIENTE'), tipo: await valor(p, 'EDTIPOATIVIDADE'),
-    data: await valor(p, 'EDDATAINICIO'), inicio: await valor(p, 'EDHORAINICIO'),
-    termino: await valor(p, 'EDHORATERMINO'), tempo: await valor(p, 'EDTEMPOTOTAL'),
-    codigo: await valor(p, 'EDCODIGOATIVIDADE'),
-    area: await p.locator('select[id^=CBAREAJURIDICA]').evaluate(x => x.options[x.selectedIndex].text),
-    disponivelCliente: await ck.isChecked(),
+    cliente: await valor(p, 'nome_cliente'), clienteCod: await valor(p, 'codigo_cliente'),
+    processoCod: await valor(p, 'codigo_processo'), processo: await valor(p, 'resumo_prc'),
+    tipo: tipo.texto, data: await valor(p, 'data'), inicio: await valor(p, 'hora_inicio'),
+    termino: await valor(p, 'hora_termino'), tempo: await valor(p, 'tempo'),
+    area: await area.evaluate(x => x.options[x.selectedIndex]?.text || ''),
   };
-  if (norm(conferido.area) !== norm(e.area)) throw new ErroLancamento(`O NAJ não aceitou a área jurídica "${e.area}".`);
+  if (!conferido.clienteCod) throw new ErroLancamento('O NAJ não preencheu o cliente.');
   const print = path.join(pastaPrints, `${e.id}.png`);
 
   if (teste) {
     await p.screenshot({ path: print });
-    await p.locator('img[id^=IMFECHARJANELA]').filter({ visible: true }).last().click({ force: true }).catch(() => {});
-    await espera(2000);
-    return { status: 'teste_ok', mensagem: `Teste: tela preenchida, não gravado. Tempo ${conferido.tempo}.`, ...r, conferido, print };
+    await fecharJanela(p);
+    return { status: 'teste_ok', mensagem: `Teste: tela preenchida, não gravado. Tempo ${conferido.tempo}.${avisoArea}`, ...r, conferido, print };
   }
 
-  await p.locator('input[value="Gravar"]').filter({ visible: true }).first().click();
-  await quieto(p);
-  await espera(1500);
-  // o NAJ confirma com "Atividade [INCLUÍDA] com sucesso!" e já abre uma atividade nova em branco
-  const incluida = /INCLU[IÍ]DA\]?\s*com sucesso/i.test(await p.innerText('body'));
-  const avisos = await p.$$eval('*', els => els.filter(x => x.offsetParent !== null && x.children.length === 0 && /grav|sucesso|erro|aten|obrigat/i.test(x.innerText || '')).map(x => x.innerText.trim()).slice(0, 5));
+  // ao gravar, o NAJ mostra "Atividade cadastrada com sucesso!" e reabre a janela com a atividade já gravada (com ID)
+  const resposta = p.waitForResponse(x => x.request().method() === 'POST' && /\/atividades(\?|$)/.test(x.url()), { timeout: 60000 }).catch(() => null);
+  await p.locator(`${MODAL} #gravar-atividade`).click();
+  const corpo = await (await resposta)?.json().catch(() => null);
+  let codigo = corpo?.model?.CODIGO ? String(corpo.model.CODIGO) : '';
+  for (let i = 0; i < 50 && !codigo; i++) { await espera(200); codigo = await valor(p, 'codigo_atividade').catch(() => ''); }
+  const avisos = await avisosNaj(p);
   await p.screenshot({ path: print });
-  const ok = p.locator('button:visible:has-text("OK"), input[type=button][value="Ok"]:visible');
-  if (await ok.count()) { await ok.first().click().catch(() => {}); await espera(1500); }
-  await p.locator('img[id^=IMFECHARJANELA]').filter({ visible: true }).last().click({ force: true }).catch(() => {});
-  await espera(3000);
-  // confirma pela lista de atividades
-  const lista = await p.innerText('body');
-  const trecho = e.descricao.trim().slice(0, 40);
-  if (!incluida && !lista.includes(trecho)) {
-    throw new ErroLancamento(`Cliquei em Gravar, mas a atividade não apareceu na lista. Aviso do NAJ: ${avisos.join(' | ') || 'nenhum'}`);
+  if (!codigo) {
+    throw new ErroLancamento(`Cliquei em Gravar, mas o NAJ não confirmou a atividade. Aviso do NAJ: ${corpo?.mensagem || avisos.join(' | ') || 'nenhum'}`);
   }
-  return { status: 'lancado', mensagem: `Lançado no NAJ (código ${conferido.codigo}, tempo ${conferido.tempo}).`, ...r, codigoNaj: conferido.codigo, conferido, print };
+  await fecharJanela(p);
+  return { status: 'lancado', mensagem: `Lançado no NAJ (código ${codigo}, tempo ${conferido.tempo}).${avisoArea}`, ...r, codigoNaj: codigo, conferido, print };
 }
 
 // Senha de cada pessoa: variável de ambiente senhaVar (padrão NAJ_SENHA, com o login NAJ_USUARIO).

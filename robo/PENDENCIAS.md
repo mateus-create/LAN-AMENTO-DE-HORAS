@@ -1,5 +1,17 @@
 # Pendências (diagnóstico de 26/10/2026)
 
+## 0. Tela nova de atividades do NAJ (19/11/2026) — lançamento adaptado
+- O NAJ trocou a tela de atividades: agora é `.../naj-adv-web/public/naj/atividades`, e a "Nova Atividade" fica no botão
+  de três pontos acima da lista. A janela tem campos de id fixo (`codigo_cliente`, `codigo_processo`, `id_tipo_atividade`,
+  `id_area_juridica`, `historico`, `data`, `hora_inicio`, `hora_termino`, botão `#gravar-atividade`).
+- `robo/naj-lancar.js` reescrito para essa tela. Cliente por nome e processo por número usam as mesmas consultas da tela
+  (`pessoas/getPessoasFilter`, `processos/getProcessosFilter`). Testado sem gravar (`--teste`): código e número de processo,
+  código e nome de cliente, cliente inexistente. O clique em Gravar ainda não foi exercido com uma atividade real.
+- Mudanças de regra do NAJ: não existe mais "Disponível ao Cliente" (o campo do formulário é ignorado); com processo,
+  o NAJ trava a área jurídica na área do processo — o robô lança assim e avisa na mensagem se ela for diferente da escolhida.
+- **Ainda na tela antiga:** `naj-cadastros.js` (lista de clientes pela pesquisa da "Nova Atividade" antiga) e
+  `naj-relatorio.js` / `naj-tipos.js` (lista e relatório de atividades). Precisam ser revistos para a tela nova.
+
 As duas rotinas (lançamentos e cadastros/relatório) estão DESLIGADAS. Correções de código feitas em 26/10 (abaixo).
 
 ## 1. Lançamentos do Luan: todos com erro — causa confirmada, robô corrigido; falta a senha
