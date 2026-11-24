@@ -27,7 +27,10 @@ const mesDe = id => id.slice(2, 9);
 const mantidos = (infoAtual.documentos || []).filter(id => !meses.includes(mesDe(id)));
 const apagar = (infoAtual.documentos || []).filter(id => meses.includes(mesDe(id)) && !novos.includes(id));
 // áreas jurídicas dos meses mantidos continuam na lista (para o mapa de núcleos)
-const juntarAreas = (novas, antigas) => [...novas, ...antigas.filter(([n]) => !novas.some(([x]) => x === n))];
+// (a tela antiga do NAJ às vezes mandava o nome com espaço não separável; a consulta nova manda espaço normal)
+const semNbsp = t => String(t).replace(/\u00a0/g, ' ');
+const juntarAreas = (novas, antigas) => [...novas, ...antigas.map(([n, q]) => [semNbsp(n), q]).filter(([n]) => !novas.some(([x]) => x === n))]
+  .filter(([n], i, l) => l.findIndex(([x]) => x === n) === i);
 const datas = atividades.map(a => a[0]).sort();
 fs.writeFileSync(path.join(saida, 'info.json'), JSON.stringify({
   de: [infoAtual.de, datas[0]].filter(Boolean).sort()[0] || null,
@@ -36,7 +39,7 @@ fs.writeFileSync(path.join(saida, 'info.json'), JSON.stringify({
   documentos: [...mantidos, ...novos].sort(),
   // tipos das atividades (Contratos Fixos / Propostas / Administrativas), gravados à parte pelo tipos-para-formulario.js
   tipos: infoAtual.tipos || [],
-  usuarios: [...new Set([...(infoAtual.usuarios || []), ...ler(path.join(entrada, 'usuarios.json'))])].sort(),
+  usuarios: [...new Set([...(infoAtual.usuarios || []), ...ler(path.join(entrada, 'usuarios.json'))].map(semNbsp))].sort(),
   areas: ler(path.join(entrada, 'areas.json')),
   areasAtividade: juntarAreas(fs.existsSync(path.join(entrada, 'areas-atividade.json')) ? ler(path.join(entrada, 'areas-atividade.json')) : [], infoAtual.areasAtividade || []),
 }));

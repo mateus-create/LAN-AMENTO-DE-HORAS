@@ -3,7 +3,8 @@
 // Uso: node robo/naj-cadastros.js <pasta de saída> [--anterior <pasta>] [--completo] [--clientes-antes <total da cópia atual>]
 //   --anterior <pasta>: pasta com clientes.json e processos.json da cópia atual do formulário (cadastros-anteriores.js).
 //     Com ela, a execução é RÁPIDA: lê só os processos novos (a pesquisa vem do código mais novo para o mais antigo)
-//     e confere os totais do NAJ; só baixa tudo de novo o que não bater (veja "Modo rápido" abaixo).
+//     e confere o total de ativos do NAJ; só lê todos os processos se a conta não fechar. Os clientes vêm sempre inteiros
+//     (consulta de pessoas da tela nova de atividades, cerca de 80 s).
 //   --completo: baixa tudo, mesmo com --anterior (uma vez por dia, para pegar alterações que não mudam os totais).
 // Gera clientes.json [[código, nome, CPF/CNPJ], ...], processos.json (só situação ativa) [[código, cliente, parte contrária,
 // número, "comarca · classe"], ...] e resumo.json { modo, clientes, processos, processosNovos, mudou }.
@@ -12,27 +13,21 @@ const fs = require('fs');
 const path = require('path');
 let chromium;
 try { ({ chromium } = require('playwright')); } catch { ({ chromium } = require('/opt/node22/lib/node_modules/playwright')); }
-const { entrarNoNaj, janelaPesquisa, espera, percorrerPaginas } = require('./naj-comum');
+const { entrarNoNaj, espera, percorrerPaginas, comNovasTentativas, abrirAtividadesNova, apiGet, apiTodas } = require('./naj-comum');
 
 const arg = nome => { const i = process.argv.indexOf(nome); return i > 0 ? process.argv[i + 1] : null; };
-const norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
 const numero = t => Number(String(t || '').replace(/\./g, '')) || 0;
 
-async function entrar(browser, modulo = 'atividade') {
+// módulo Processos (tela antiga, sem mudança): usado só para a pesquisa; ele abre um cadastro em branco que nunca é gravado
+async function entrar(browser) {
   const p = await entrarNoNaj(browser, { login: process.env.NAJ_USUARIO, senha: process.env.NAJ_SENHA });
-  await p.locator('text="Controles"').first().click();
-  await espera(800);
-  if (modulo === 'processos') {
-    // módulo Processos: usado só para a pesquisa; ele abre um cadastro em branco que nunca é gravado
+  try {
+    await p.locator('text="Controles"').first().click();
+    await espera(800);
     await p.locator('text="Processos"').first().click();
     await espera(6000);
     return p;
-  }
-  await p.locator('text="Atividades"').first().click();
-  await espera(4000);
-  await p.locator('text="Nova Atividade"').first().click();
-  await espera(4000);
-  return p;
+  } catch (err) { await p.context().close().catch(() => {}); throw err; }
 }
 
 async function quieto(p) {
@@ -43,7 +38,7 @@ async function quieto(p) {
 
 // ---------- processos (módulo Processos, filtro "Somente Ativos"; a lista vem do código mais novo para o mais antigo) ----------
 async function abrirProcessos(browser) {
-  const p = await entrar(browser, 'processos');
+  const p = await entrar(browser);
   await p.selectOption('#TIWCOMBOBOX2', { index: 1 }); // "* Somente Ativos *"
   await quieto(p);
   await p.locator('#TIWGRADBUTTON3').evaluate(e => e.click());
@@ -75,7 +70,7 @@ async function todosProcessos(browser) {
     },
   });
   // confere com o total de uma sessão nova (o total da sessão que leu pode ser de antes de um processo novo)
-  const l = await abrirProcessos(browser);
+  const l = await comNovasTentativas(() => abrirProcessos(browser), 'processos ativos');
   const fim = await totalProcessos(l.p);
   await l.p.context().close();
   console.log(`processos ativos: ${codigos.size} (o NAJ informa ${fim})`);
@@ -104,52 +99,27 @@ async function processosNovos(browser, anteriores) {
   return { confere: total > 0 && juntos.size === total, juntos, novos: [...novos.values()] };
 }
 
-// ---------- clientes (pesquisa de clientes da tela "Nova Atividade"; a lista vem em ordem alfabética) ----------
-async function linhasClientes(p) {
-  return p.$$eval('[id^=RGJANELA] tr', trs => trs
-    .filter(t => t.offsetParent !== null && t.querySelector('a[title^="Clique aqui"]'))
-    .map(t => [...t.cells].map(c => c.innerText.trim()))
-    .filter(c => c.length === 3 && c[0]));
-}
-async function abrirClientes(browser, situacao) {
-  const p = await entrar(browser);
-  await p.locator('img[id^=IMCLIENTECNS]').click();
-  await quieto(p);
-  const jan = await janelaPesquisa(p, 'CPF/CNPJ');
-  await p.selectOption(jan.combo, { label: situacao });
-  await quieto(p);
-  await p.fill(jan.busca[0], '');
-  await p.click(jan.botao);
-  await quieto(p);
-  // "Total de: N Registro(s)" da própria janela
-  const texto = await p.locator(`[id^=RGJANELA]:has(${jan.botao})`).first().innerText();
-  const totalNaj = numero((texto.match(/Total de:\s*([\d.]+)\s*Registro/) || [])[1]);
-  return { p, pagina: jan.pagina, total: jan.total, totalNaj };
-}
-async function totaisClientes(browser) {
-  const r = {};
-  for (const s of ['Ativo', 'Inativo']) { const l = await abrirClientes(browser, s); r[s] = l.totalNaj; await l.p.context().close(); }
-  return r;
-}
+// ---------- clientes (consulta de pessoas da tela nova de atividades; ~80 s para todos) ----------
+// Mesmo conjunto da antiga pesquisa de clientes da "Nova Atividade": pessoas das divisões liberadas ao usuário,
+// com situação Ativo (A) ou Inativo (I). Conferido em 24/11/2026: igual, código a código, à cópia feita pela tela antiga.
 async function todosClientes(browser) {
-  const clientes = new Map();
-  for (const situacao of ['Ativo', 'Inativo']) {
-    const vistos = new Map();
-    await percorrerPaginas({
-      rotulo: `clientes ${situacao}`, quieto, assinatura: async p => ((await linhasClientes(p))[0] || [])[0] || '',
-      abrir: () => abrirClientes(browser, situacao),
-      porPagina: async (p, pg) => {
-        for (const l of await linhasClientes(p)) vistos.set(l[0], l);
-        if (pg % 50 === 0) console.log(`clientes ${situacao}: página ${pg}, ${vistos.size} registros`);
-      },
-    });
-    const l = await abrirClientes(browser, situacao);
-    await l.p.context().close();
-    console.log(`clientes ${situacao}: ${vistos.size} (o NAJ informa ${l.totalNaj})`);
-    if (!l.totalNaj || vistos.size !== l.totalNaj) throw new Error(`Li ${vistos.size} clientes "${situacao}", mas o NAJ informa ${l.totalNaj}. Nada foi alterado.`);
-    for (const c of vistos.values()) clientes.set(c[0], c);
+  const p = await abrirAtividadesNova(browser);
+  try {
+    const div = await apiGet(p, 'divisoes/listPermission');
+    const divisoes = new Set(((div && div.resultado) || []).map(d => String(d.CODIGO)));
+    if (!divisoes.size) throw new Error('O NAJ não informou as divisões liberadas ao usuário.');
+    const { total, linhas } = await apiTodas(p, 'pessoas', { rotulo: 'pessoas' });
+    const espaco = t => String(t || '').replace(/\s+/g, ' ').trim();
+    // CPF ou CNPJ como a tela antiga mostrava: sem espaços nas pontas e vazio quando não há número
+    const documento = x => { const d = espaco(x.CPF) || espaco(x.CNPJ); return /\d/.test(d) ? d : ''; };
+    const clientes = linhas
+      .filter(x => divisoes.has(String(x.CODIGO_DIVISAO)) && ['A', 'I'].includes(x.SITUACAO) && espaco(x.NOME))
+      .map(x => [String(x.CODIGO), espaco(x.NOME), documento(x)]);
+    console.log(`pessoas no NAJ: ${total}; clientes (divisões ${[...divisoes].join(', ')}, ativos e inativos): ${clientes.length}`);
+    return clientes.sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'));
+  } finally {
+    await p.context().close().catch(() => {});
   }
-  return [...clientes.values()].map(([cod, nome, doc]) => [cod, nome, doc || '']).sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'));
 }
 
 (async () => {
@@ -173,17 +143,8 @@ async function todosClientes(browser) {
   if (!processos) processos = [...(await todosProcessos(browser)).values()];
   processos.sort((a, b) => Number(a[0]) - Number(b[0]));
 
-  // clientes
-  let clientes;
-  if (rapido) {
-    const t = await totaisClientes(browser);
-    const nomes = new Set(anterior.clientes.map(c => norm(c[1])));
-    const semCliente = novos.filter(r => r[1] && !nomes.has(norm(r[1])));
-    console.log(`clientes no NAJ: ${t.Ativo} ativos + ${t.Inativo} inativos = ${t.Ativo + t.Inativo}; cópia atual ${anterior.clientes.length}; processos novos com cliente fora da lista: ${semCliente.length}`);
-    if (t.Ativo && t.Ativo + t.Inativo === anterior.clientes.length && !semCliente.length) clientes = anterior.clientes;
-    else { console.log('clientes: mudaram; lendo todos'); resumo.clientesCompleto = true; }
-  }
-  if (!clientes) clientes = await todosClientes(browser);
+  // clientes: sempre a lista inteira (a consulta nova leva cerca de 80 s)
+  const clientes = await todosClientes(browser);
   await browser.close();
 
   // a lista não pode encolher de repente (tela do NAJ mudou, paginação quebrada): --clientes-antes <n> é o total da cópia atual

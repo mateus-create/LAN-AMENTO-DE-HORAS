@@ -1,40 +1,42 @@
-# Pendências (diagnóstico de 26/10/2026)
+# Situação dos robôs e pendências (atualizado em 24/11/2026)
 
-As duas rotinas (lançamentos e cadastros/relatório) estão DESLIGADAS. Correções de código feitas em 26/10 (abaixo).
+## Estado atual
+- Tudo está no branch `main`: os 11 branches de trabalho anteriores foram juntados nele em 24/11.
+  Para trabalho novo, parta sempre do `main` atualizado.
+- `formulario/lancamento-horas.html` é igual à versão publicada em https://claude.ai/artifact/DW1sanezeJtNKf3D3N2uyf.
+  Ao mudar o formulário, publique e faça commit da mesma versão (a publicada é a que vale).
+- Rotinas ligadas, as duas usando o `main`:
+  - lançamentos: 8h–20h a cada 2 h, dias úteis (`robo/CICLO.md`);
+  - cadastros e relatório: 06:45 (rápido + relatório + tipos) e 12:45 (completo), dias úteis (`robo/CADASTROS.md`).
+- Logins do NAJ testados em 24/11 com `--testar-login`: mateus, luan, felipe e tributario aceitos.
+- Formulário atualizado em 24/11 com os robôs novos: 4.940 clientes, 1.405 processos ativos, relatório de 01/10 a 24/11,
+  tipos de hora de julho a novembro.
 
-## 1. Lançamentos do Luan: todos com erro — causa confirmada, robô corrigido; falta a senha
-- Causa (26/10): o NAJ responde `401 "Não autorizado"` ao login `luan@mks.adv.br` com a senha de `NAJ_SENHA_LUAN_MKS_ADV_BR`.
-  A senha guardada no ambiente está errada (não há espaço nem aspas sobrando; o login do dono funciona).
-- Feito no robô (`robo/naj-comum.js`, `robo/naj-lancar.js`):
-  - login recusado vira a mensagem "O NAJ recusou o login/senha de X ... Confira a senha cadastrada para essa pessoa.";
-  - uma única tentativa por pessoa no lote: os outros itens dela recebem a mesma mensagem sem nova tentativa;
-  - todo erro guarda print da tela em `<prints>/<id>-erro.png` (campo `print` do resultado);
-  - teste de credencial: `node robo/naj-lancar.js --testar-login <login> <NAJ_SENHA_...>` (passo 1 do `CICLO.md`).
-- **Falta (Mateus):** corrigir o valor de `NAJ_SENHA_LUAN_MKS_ADV_BR` nas variáveis do ambiente, confirmar com
-  `--testar-login luan@mks.adv.br NAJ_SENHA_LUAN_MKS_ADV_BR` em uma sessão nova e só então devolver os 18 itens do Luan para `pendente`.
+## Tela nova de atividades do NAJ (desde 19/11/2026)
+- Controles → Atividades agora abre a aplicação nova do NAJ (`.../naj-adv-web/public/naj/atividades`). A "Nova Atividade"
+  fica no botão de três pontos acima da lista, numa janela com campos de id fixo (`codigo_cliente`, `codigo_processo`,
+  `id_tipo_atividade`, `id_area_juridica`, `historico`, `data`, `hora_inicio`, `hora_termino`, botão `#gravar-atividade`).
+- A aplicação nova tem consultas paginadas em JSON, usadas pelos robôs (helpers em `robo/naj-comum.js`:
+  `abrirAtividadesNova`, `apiGet`, `apiTodas`, `filtroPeriodo`):
+  - `naj-lancar.js`: preenche e grava a janela nova; cliente por nome e processo por número pelas consultas
+    `pessoas/getPessoasFilter` e `processos/getProcessosFilter`;
+  - `naj-cadastros.js`: clientes por `pessoas/paginate` (divisões liberadas, situação Ativo/Inativo), cerca de 80 s;
+  - `naj-relatorio.js`: atividades por `atividades/paginate` (código, processo, área jurídica e tempo), cerca de 20 s por mês;
+  - `naj-tipos.js`: tipo de cada atividade pela mesma consulta, sem PDF.
+- O módulo Processos e Relatórios → Atividades continuam na tela antiga e não mudaram; a lista de processos e a área de
+  cada processo seguem sendo lidas do módulo Processos.
+- Regras novas do NAJ: não existe mais "Disponível ao Cliente" (o campo do formulário é ignorado); com processo, o NAJ trava
+  a área jurídica na área do processo — o robô lança assim e avisa na mensagem se ela for diferente da escolhida.
+- A tela antiga mandava nomes de usuário e de algumas áreas com espaço não separável; a consulta nova manda espaço normal.
+  `relatorio-para-formulario.js` normaliza os nomes antigos ao juntar com o `info` atual.
 
-## 2. Cadastros: o download de clientes trazia só 15 — corrigido
-- Causa: o NAJ acrescentou uma janela de pesquisa nova à tela "Nova Atividade" e renumerou os campos. A janela de clientes
-  passou de `#TIWEDIT8/9/10` para `#TIWEDIT10/11/12`; o robô lia o total de páginas de um campo vazio e lia só a 1ª página
-  de cada situação (10 ativos + 5 inativos = 15). A mesma mudança quebrava, no `naj-lancar.js`, a busca de cliente por nome
-  (`#TIWEDIT8`) e de processo por número (`#TIWEDIT14`).
-- Feito: as janelas de pesquisa são achadas pelo conteúdo (`janelaPesquisa` em `robo/naj-comum.js`) e o campo
-  "Número do Processo" pelo rótulo ao lado dele, sem ids fixos. O `naj-cadastros.js` confere cada situação com o
-  "Total de: N Registro(s)" do NAJ e recusa sozinho uma lista menor que 98% dele ou de `--clientes-antes <N>`.
-- Testado sem gravar no NAJ: cliente por nome e processo por número preenchem a tela (`--teste`).
-- Download real em 26/10: clientes ativos 4.923 (o NAJ informa 4.923), contra 15 antes da correção.
-
-## 3. Relatório diário: parado desde 22/10
-- Os campos usados pelo relatório (lista de atividades e módulo Processos) não mudaram com a renumeração; a parada
-  coincide com a falha dos cadastros na mesma rotina das 06:45. Conferir na primeira execução depois de religar.
-
-## Para religar as rotinas
-- Cadastros/relatório: podem voltar (passar `--clientes-antes` com o total de `cadastros/info`, ver `CADASTROS.md`).
-- Lançamentos: podem voltar; os itens do Luan só depois da senha corrigida (item 1).
+## A acompanhar
+- O primeiro lançamento real pela rotina é o primeiro uso do botão Gravar da tela nova (o preenchimento foi testado com
+  `--teste`). Conferir no NAJ se a atividade apareceu certa.
+- Meses de julho a setembro no formulário ainda têm áreas jurídicas com espaço não separável (vieram da tela antiga).
+  Só importa se essas áreas forem ligadas a um núcleo; nesse caso, rode o relatório desde julho para regravar esses meses.
 
 ## Custos
 - Rotinas em sessão nova custam ~US$ 0,13 (lançamentos) e ~US$ 0,22–0,50 (cadastros/relatório) por execução.
-- Novos horários: lançamentos 8h–20h a cada 2 h (7/dia, com saída rápida sem clonar quando não há pendentes);
-  cadastros 06:45 e 12:45 (relatório só às 06:45).
-- O que mais gasta: conversas longas (esta sessão e a sessão ROTINA, ~US$ 190–240 cada) e rotina que reabre a mesma sessão
-  (persistente) — cada execução relê todo o histórico. Para trabalho novo, abra uma conversa nova.
+- O que mais gasta: conversas longas e rotina que reabre a mesma sessão (persistente) — cada execução relê todo o
+  histórico. Para trabalho novo, abra uma conversa nova a partir do `main`.
