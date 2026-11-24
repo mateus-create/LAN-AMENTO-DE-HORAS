@@ -17,6 +17,11 @@
 
 As duas rotinas (lançamentos e cadastros/relatório) estão DESLIGADAS. Correções de código feitas em 26/10 (abaixo).
 
+- 24/11: formulário atualizado com os robôs novos (4.940 clientes, 1.405 processos ativos; relatório de 01/10 a 24/11;
+  tipos de jul–nov). As rotinas de lançamento e de cadastros/relatório estão ligadas e apontam para o branch
+  `claude/wizardly-ramanujan-yiqfw5` (o main ainda tem os robôs da tela antiga). Quando esse branch entrar no main,
+  voltar as duas rotinas para `main`. O primeiro lançamento real da rotina é o primeiro uso do botão Gravar da tela nova.
+
 ## 1. Lançamentos do Luan: todos com erro — causa confirmada, robô corrigido; falta a senha
 - Causa (26/10): o NAJ responde `401 "Não autorizado"` ao login `luan@mks.adv.br` com a senha de `NAJ_SENHA_LUAN_MKS_ADV_BR`.
   A senha guardada no ambiente está errada (não há espaço nem aspas sobrando; o login do dono funciona).
