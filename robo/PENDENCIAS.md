@@ -9,8 +9,11 @@
   código e nome de cliente, cliente inexistente. O clique em Gravar ainda não foi exercido com uma atividade real.
 - Mudanças de regra do NAJ: não existe mais "Disponível ao Cliente" (o campo do formulário é ignorado); com processo,
   o NAJ trava a área jurídica na área do processo — o robô lança assim e avisa na mensagem se ela for diferente da escolhida.
-- **Ainda na tela antiga:** `naj-cadastros.js` (lista de clientes pela pesquisa da "Nova Atividade" antiga) e
-  `naj-relatorio.js` / `naj-tipos.js` (lista e relatório de atividades). Precisam ser revistos para a tela nova.
+- 24/11: os outros robôs também passaram para a tela nova (consultas `pessoas/paginate` e `atividades/paginate`, helpers em
+  `robo/naj-comum.js`): clientes do `naj-cadastros.js`, atividades do `naj-relatorio.js` e tipos do `naj-tipos.js` (sem PDF).
+  O módulo Processos não mudou e continua sendo lido como antes (lista de processos e área de cada processo).
+  Conferido contra o formulário: clientes iguais código a código (+1 cadastrado no dia), outubro com as mesmas 910 atividades,
+  tipos de jul–nov com todas as atividades que o formulário tinha (mais as que o PDF deixava de fora).
 
 As duas rotinas (lançamentos e cadastros/relatório) estão DESLIGADAS. Correções de código feitas em 26/10 (abaixo).
 

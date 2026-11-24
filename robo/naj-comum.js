@@ -131,4 +131,63 @@ async function percorrerPaginas({ abrir, porPagina, quieto, rotulo, assinatura, 
   return total;
 }
 
-module.exports = { ErroLogin, entrarNoNaj, janelaPesquisa, espera, percorrerPaginas };
+// ---------- tela nova de atividades (naj-adv-web, desde 11/2026) ----------
+// Controles → Atividades abre a aplicação nova do NAJ, que tem consultas paginadas em JSON (as mesmas que a tela usa).
+// Abre essa tela e devolve a página, pronta para apiTodas()/apiGet(). Só leitura.
+async function abrirAtividadesNova(browser, cred) {
+  const p = await entrarNoNaj(browser, cred || { login: process.env.NAJ_USUARIO, senha: process.env.NAJ_SENHA });
+  try {
+    await p.locator('text="Controles"').first().click();
+    await espera(800);
+    await p.locator('text="Atividades"').first().click();
+    await p.waitForURL(/naj-adv-web/, { timeout: 60000 });
+    await p.waitForFunction(() => typeof NajAtividade !== 'undefined' && typeof baseURL !== 'undefined', null, { timeout: 60000 });
+    await p.waitForLoadState('networkidle').catch(() => {});
+    await espera(1500);
+    return p;
+  } catch (err) {
+    await p.context().close().catch(() => {});
+    throw new Error(`Não consegui abrir a tela nova de atividades do NAJ: ${String(err.message).split('\n')[0]}`);
+  }
+}
+
+// GET numa rota da aplicação nova (relativa a baseURL), com a sessão da página. Tenta de novo se falhar.
+async function apiGet(p, rota, tentativas = 3) {
+  for (let i = 1; ; i++) {
+    try {
+      return await p.evaluate(url => NajAtividade.getData(baseURL + url), rota);
+    } catch (err) {
+      if (i >= tentativas) throw new Error(`Consulta ${rota.split('?')[0]} do NAJ falhou: ${String(err.message).split('\n')[0]}`);
+      await espera(3000 * i);
+    }
+  }
+}
+
+// Todas as linhas de uma consulta paginada (rota/paginate; o NAJ devolve no máximo 50 por página).
+// filtros: [{ col, op, val, val2? }] (op "B" = entre, "I" = igual). chave(linha) identifica cada linha: linhas repetidas
+// entre páginas (a lista mudou durante a leitura) contam uma vez só. Se no fim houver menos linhas que o total
+// informado, lê tudo de novo e junta (até 3 vezes); se ainda faltar, para com erro.
+async function apiTodas(p, rota, { filtros, chave = x => x.CODIGO, rotulo = rota } = {}) {
+  const f = filtros ? '&f=' + Buffer.from(JSON.stringify(filtros)).toString('base64') : '';
+  const linhas = new Map();
+  let total = 0;
+  for (let volta = 1; ; volta++) {
+    for (let pg = 1; ; pg++) {
+      const r = await apiGet(p, `${rota}/paginate?limit=50&page=${pg}${f}`);
+      if (!r || !Array.isArray(r.resultado)) throw new Error(`${rotulo}: resposta inesperada do NAJ na página ${pg}.`);
+      total = Number(r.total) || 0;
+      for (const x of r.resultado) linhas.set(String(chave(x)), x);
+      if (!r.resultado.length || pg * (Number(r.limite) || 50) >= total) break;
+      if (pg % 20 === 0) console.log(`${rotulo}: página ${pg} de ${Math.ceil(total / (Number(r.limite) || 50))}`);
+    }
+    if (linhas.size >= total) break;
+    if (volta >= 3) throw new Error(`${rotulo}: li ${linhas.size}, mas o NAJ informa ${total}.`);
+    console.log(`${rotulo}: li ${linhas.size} de ${total} (a lista mudou durante a leitura); lendo de novo`);
+  }
+  return { total, linhas: [...linhas.values()] };
+}
+
+// Filtro de período (datas AAAA-MM-DD, inclusivas) da lista de atividades.
+const filtroPeriodo = (de, ate) => [{ val: de, val2: ate, op: 'B', col: 'ATIVIDADE.DATA' }];
+
+module.exports = { ErroLogin, entrarNoNaj, janelaPesquisa, espera, percorrerPaginas, abrirAtividadesNova, apiGet, apiTodas, filtroPeriodo };
