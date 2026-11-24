@@ -15,10 +15,12 @@ const { entrarNoNaj, espera, percorrerPaginas, abrirAtividadesNova, apiGet, apiT
 
 async function entrar(browser, modulo) {
   const p = await entrarNoNaj(browser, { login: process.env.NAJ_USUARIO, senha: process.env.NAJ_SENHA });
-  await p.locator('text="Controles"').first().click();
-  await espera(800);
-  await p.locator(`text="${modulo}"`).first().click();
-  await espera(6000);
+  try {
+    await p.locator('text="Controles"').first().click();
+    await espera(800);
+    await p.locator(`text="${modulo}"`).first().click();
+    await espera(6000);
+  } catch (err) { await p.context().close().catch(() => {}); throw err; }
   return p;
 }
 async function quieto(p) {

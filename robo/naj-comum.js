@@ -86,7 +86,19 @@ async function janelaPesquisa(p, marca) {
 // porPagina(p, pg) lê a página aberta e devolve true para parar antes do fim. Só depois que ela termina a página conta como lida.
 // assinatura(p) (opcional) identifica o conteúdo da página (ex.: código da primeira linha): depois de trocar de página, espera
 // até ela mudar, para nunca ler de novo a página anterior. Uma página que passe de 2,5 × limitePagina é dada como travada.
-async function percorrerPaginas({ abrir, porPagina, quieto, rotulo, assinatura, de = 1, ate = Infinity, passo = 1, tentativas = 4, limitePagina = 120000 }) {
+// Repete uma entrada no NAJ que falhou (tela de login lenta, menu que não aparece a tempo), com uma pausa entre as tentativas.
+async function comNovasTentativas(fn, rotulo, vezes = 3) {
+  for (let i = 1; ; i++) {
+    try { return await fn(); } catch (err) {
+      if (i >= vezes) throw err;
+      console.log(`${rotulo}: não consegui entrar no NAJ (${String(err.message).split('\n')[0]}); tentando de novo (${i}/${vezes - 1})`);
+      await espera(15000 * i);
+    }
+  }
+}
+
+async function percorrerPaginas({ abrir: abrirUmaVez, porPagina, quieto, rotulo, assinatura, de = 1, ate = Infinity, passo = 1, tentativas = 4, limitePagina = 120000 }) {
+  const abrir = () => comNovasTentativas(abrirUmaVez, rotulo);
   let lista = await abrir();
   const total = Number(await lista.p.inputValue(lista.total)) || 1;
   let falhas = 0;
@@ -135,6 +147,9 @@ async function percorrerPaginas({ abrir, porPagina, quieto, rotulo, assinatura, 
 // Controles → Atividades abre a aplicação nova do NAJ, que tem consultas paginadas em JSON (as mesmas que a tela usa).
 // Abre essa tela e devolve a página, pronta para apiTodas()/apiGet(). Só leitura.
 async function abrirAtividadesNova(browser, cred) {
+  return comNovasTentativas(() => abrirAtividadesNovaUmaVez(browser, cred), 'tela nova de atividades');
+}
+async function abrirAtividadesNovaUmaVez(browser, cred) {
   const p = await entrarNoNaj(browser, cred || { login: process.env.NAJ_USUARIO, senha: process.env.NAJ_SENHA });
   try {
     await p.locator('text="Controles"').first().click();
@@ -190,4 +205,4 @@ async function apiTodas(p, rota, { filtros, chave = x => x.CODIGO, rotulo = rota
 // Filtro de período (datas AAAA-MM-DD, inclusivas) da lista de atividades.
 const filtroPeriodo = (de, ate) => [{ val: de, val2: ate, op: 'B', col: 'ATIVIDADE.DATA' }];
 
-module.exports = { ErroLogin, entrarNoNaj, janelaPesquisa, espera, percorrerPaginas, abrirAtividadesNova, apiGet, apiTodas, filtroPeriodo };
+module.exports = { ErroLogin, entrarNoNaj, janelaPesquisa, espera, percorrerPaginas, comNovasTentativas, abrirAtividadesNova, apiGet, apiTodas, filtroPeriodo };

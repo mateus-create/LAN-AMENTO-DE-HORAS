@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 let chromium;
 try { ({ chromium } = require('playwright')); } catch { ({ chromium } = require('/opt/node22/lib/node_modules/playwright')); }
-const { entrarNoNaj, espera, percorrerPaginas, abrirAtividadesNova, apiGet, apiTodas } = require('./naj-comum');
+const { entrarNoNaj, espera, percorrerPaginas, comNovasTentativas, abrirAtividadesNova, apiGet, apiTodas } = require('./naj-comum');
 
 const arg = nome => { const i = process.argv.indexOf(nome); return i > 0 ? process.argv[i + 1] : null; };
 const numero = t => Number(String(t || '').replace(/\./g, '')) || 0;
@@ -21,11 +21,13 @@ const numero = t => Number(String(t || '').replace(/\./g, '')) || 0;
 // módulo Processos (tela antiga, sem mudança): usado só para a pesquisa; ele abre um cadastro em branco que nunca é gravado
 async function entrar(browser) {
   const p = await entrarNoNaj(browser, { login: process.env.NAJ_USUARIO, senha: process.env.NAJ_SENHA });
-  await p.locator('text="Controles"').first().click();
-  await espera(800);
-  await p.locator('text="Processos"').first().click();
-  await espera(6000);
-  return p;
+  try {
+    await p.locator('text="Controles"').first().click();
+    await espera(800);
+    await p.locator('text="Processos"').first().click();
+    await espera(6000);
+    return p;
+  } catch (err) { await p.context().close().catch(() => {}); throw err; }
 }
 
 async function quieto(p) {
@@ -68,7 +70,7 @@ async function todosProcessos(browser) {
     },
   });
   // confere com o total de uma sessão nova (o total da sessão que leu pode ser de antes de um processo novo)
-  const l = await abrirProcessos(browser);
+  const l = await comNovasTentativas(() => abrirProcessos(browser), 'processos ativos');
   const fim = await totalProcessos(l.p);
   await l.p.context().close();
   console.log(`processos ativos: ${codigos.size} (o NAJ informa ${fim})`);
